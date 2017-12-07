@@ -2510,10 +2510,12 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       exit(1);
     }
 
+#ifdef OS_WIN
     if (FLAGS_run_async) {
       open_options_.use_async_reads = true;
       open_options_.async_threadpool = std::move(async_tp_);
     }
+#endif
 
     Open(&open_options_);
     PrintHeader();
@@ -2640,11 +2642,13 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       } else if (name == "readrandom") {
         method = &Benchmark::ReadRandom;
       } else if (name == "readrandomasync") {
+#ifdef OS_WIN
         bench_func_.reset(new ReadRandomAsync());
         if (!FLAGS_run_async) {
           fprintf(stdout, "run_async must be enabled\n");
           exit(1);
         }
+#endif
       } else if (name == "readrandomfast") {
         method = &Benchmark::ReadRandomFast;
       } else if (name == "multireadrandom") {
@@ -2662,11 +2666,13 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       } else if (name == "seekrandom") {
         method = &Benchmark::SeekRandom;
       } else if (name == "seekrandomasync") {
+#ifdef OS_WIN
         bench_func_.reset(new SeekRandomAsync());
         if (!FLAGS_run_async) {
           fprintf(stdout, "run_async must be enabled\n");
           exit(1);
         }
+#endif
       }  else if (name == "seekrandomwhilewriting") {
         num_threads++;  // Add extra thread for writing
         method = &Benchmark::SeekRandomWhileWriting;
