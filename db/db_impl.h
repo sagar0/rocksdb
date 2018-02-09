@@ -653,6 +653,9 @@ class DBImpl : public DB {
   std::unordered_map<std::string, RecoveredTransaction*>
       recovered_transactions_;
 
+  InstrumentedMutex trace_file_mutex_;
+  std::unique_ptr<WritableFileWriter> trace_writer_;
+
   // Except in DB::Open(), WriteOptionsFile can only be called when:
   // Persist options to options file.
   // If need_mutex_lock = false, the method will lock DB mutex.
