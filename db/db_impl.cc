@@ -146,6 +146,8 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
       immutable_db_options_(initial_db_options_),
       mutable_db_options_(initial_db_options_),
       stats_(immutable_db_options_.statistics.get()),
+      trace_file_mutex_(stats_, env_, DB_MUTEX_WAIT_MICROS,
+                        immutable_db_options_.use_adaptive_mutex),
       db_lock_(nullptr),
       mutex_(stats_, env_, DB_MUTEX_WAIT_MICROS,
              immutable_db_options_.use_adaptive_mutex),
@@ -217,6 +219,15 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
       preserve_deletes_(options.preserve_deletes),
       closed_(false) {
   env_->GetAbsolutePath(dbname, &db_absolute_path_);
+
+  std::unique_ptr<WritableFile> trace_file;
+  std::string fname = "/dev/shm/rocksdb.trace";
+  //Status s = env_->NewWritableFile("/dev/shm/rocksdb.trace", &trace_file, env_options_);
+  Status s = NewWritableFile(env_, fname, &trace_file, env_options_);
+  if (s.ok()) {
+    trace_writer_.reset(new WritableFileWriter(std::move(trace_file),
+                                               env_options_, nullptr));
+  }
 
   // Reserve ten files or so for other uses and give the rest to TableCache.
   // Give a large number for setting of "infinite" open files.
@@ -1004,6 +1015,24 @@ Status DBImpl::GetImpl(const ReadOptions& read_options,
 
   auto cfh = reinterpret_cast<ColumnFamilyHandleImpl*>(column_family);
   auto cfd = cfh->cfd();
+
+  // {
+  //   InstrumentedMutexLock l(&trace_file_mutex_);
+  //   char trace_line[512];
+  //   if (trace_writer_ != nullptr) {
+  //     int ll = snprintf(trace_line, sizeof(trace_line),
+  //                       "Get\t%s\t%s\n",
+  //                       cfd->GetName().c_str(),
+  //                       key.ToString(true).c_str());
+  //     trace_writer_->Append(Slice(trace_line, ll));
+  //     trace_writer_->SyncWithoutFlush(immutable_db_options_.use_fsync);
+  //   } else {
+  //     printf("trace_writer_ is NULL------------------>\n");
+  //   }
+  // }
+
+  // Trace
+  fprintf(stderr, "\nDBImpl::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString(true).c_str());
 
   // Acquire SuperVersion
   SuperVersion* sv = GetAndRefSuperVersion(cfd);
