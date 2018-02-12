@@ -2069,7 +2069,7 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
   // If full filter not useful, Then go into each block
   if (!FullFilterKeyMayMatch(read_options, filter, key, no_io)) {
     RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
-    fprintf(stderr, "\tBloomUseful");
+    fprintf(stderr, "\tBloom:Useful");
   } else {
     BlockIter iiter_on_stack;
     auto iiter = NewIndexIterator(read_options, &iiter_on_stack,
@@ -2095,9 +2095,10 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         // TODO: think about interaction with Merge. If a user key cannot
         // cross one data block, we should be fine.
         RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
-        fprintf(stderr, "\tBloomUseful");
+        fprintf(stderr, "\tBloom:Useful");
         break;
       } else {
+        fprintf(stderr, "\tBloom:NotUseful");
         BlockIter biter;
         NewDataBlockIterator(rep_, read_options, iiter->value(), &biter, false,
                              get_context);
