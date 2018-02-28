@@ -223,6 +223,7 @@ std::string IdentityFileName(const std::string& dbname) {
 //    dbname/IDENTITY
 //    dbname/CURRENT
 //    dbname/LOCK
+//    dbname/TRACE
 //    dbname/<info_log_name_prefix>
 //    dbname/<info_log_name_prefix>.old.[0-9]+
 //    dbname/MANIFEST-[0-9]+
@@ -236,6 +237,10 @@ bool ParseFileName(const std::string& fname,
                    FileType* type,
                    WalFileType* log_type) {
   return ParseFileName(fname, number, "", type, log_type);
+}
+
+std::string TraceFileName(const std::string& dbname) {
+  return dbname + "/TRACE";
 }
 
 bool ParseFileName(const std::string& fname, uint64_t* number,
@@ -254,6 +259,9 @@ bool ParseFileName(const std::string& fname, uint64_t* number,
   } else if (rest == "LOCK") {
     *number = 0;
     *type = kDBLockFile;
+  } else if (rest == "TRACE") {
+    *number = 0;
+    *type = kTraceFile;
   } else if (info_log_name_prefix.size() > 0 &&
              rest.starts_with(info_log_name_prefix)) {
     rest.remove_prefix(info_log_name_prefix.size());

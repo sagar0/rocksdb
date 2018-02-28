@@ -39,7 +39,8 @@ enum FileType {
   kMetaDatabase,
   kIdentityFile,
   kOptionsFile,
-  kBlobFile
+  kBlobFile,
+  kTraceFile
 };
 
 // Return the name of the log file with the specified number
@@ -141,6 +142,9 @@ extern std::string MetaDatabaseName(const std::string& dbname,
 // that will get regenerated if the db loses all its data and is recreated fresh
 // either from a backup-image or empty
 extern std::string IdentityFileName(const std::string& dbname);
+
+// Return the name of the Trace file.
+extern std::string TraceFileName(const std::string& dbname);
 
 // If filename is a rocksdb file, store the type of the file in *type.
 // The number encoded in the filename is stored in *number.  If the
