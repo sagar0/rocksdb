@@ -51,7 +51,8 @@ TEST_F(FileNameTest, Parse) {
         {"rocksdb_dir_LOG.old", 0, kInfoLogFile, kDifferentInfoLogDir},
         {"rocksdb_dir_LOG.old.6688", 6688, kInfoLogFile, kDifferentInfoLogDir},
         {"18446744073709551615.log", 18446744073709551615ull, kLogFile,
-         kAllMode}, };
+         kAllMode}, 
+        {"TRACE", 0, kTraceFile, kAllMode}, };
   for (char mode : {kDifferentInfoLogDir, kDefautInfoLogDir, kNoCheckLogDir}) {
     for (unsigned int i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
       InfoLogPrefix info_log_prefix(mode != kDefautInfoLogDir, "/rocksdb/dir");
@@ -97,7 +98,9 @@ TEST_F(FileNameTest, Parse) {
     "184467440737095516150.log",
     "100",
     "100.",
-    "100.lop"
+    "100.lop",
+    "TRCE",
+    "TRAC",
   };
   for (unsigned int i = 0; i < sizeof(errors) / sizeof(errors[0]); i++) {
     std::string f = errors[i];
@@ -170,6 +173,12 @@ TEST_F(FileNameTest, Construction) {
   ASSERT_TRUE(ParseFileName(fname.c_str() + 4, &number, &type));
   ASSERT_EQ(100U, number);
   ASSERT_EQ(kMetaDatabase, type);
+
+  fname = TraceFileName("foo");
+  ASSERT_EQ("foo/", std::string(fname.data(), 4));
+  ASSERT_TRUE(ParseFileName(fname.c_str() + 4, &number, &type));
+  ASSERT_EQ(0U, number);
+  ASSERT_EQ(kTraceFile, type);
 }
 
 }  // namespace rocksdb
