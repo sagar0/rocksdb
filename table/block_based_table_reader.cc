@@ -2059,7 +2059,8 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
   // If full filter not useful, Then go into each block
   if (!FullFilterKeyMayMatch(read_options, filter, key, no_io)) {
     RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
-    fprintf(stderr, "\tBloom:Useful");
+    // fprintf(stderr, "\tBloom:Useful");
+    ROCKS_LOG_TRACE(rep_->ioptions.trace_log, "%s\t1", key.ToString(true).c_str());
   } else {
     BlockIter iiter_on_stack;
     auto iiter = NewIndexIterator(read_options, &iiter_on_stack,
@@ -2084,10 +2085,12 @@ Status BlockBasedTable::Get(const ReadOptions& read_options, const Slice& key,
         // TODO: think about interaction with Merge. If a user key cannot
         // cross one data block, we should be fine.
         RecordTick(rep_->ioptions.statistics, BLOOM_FILTER_USEFUL);
-        fprintf(stderr, "\tBloom:Useful");
+        // fprintf(stderr, "\tBloom:Useful");
+        ROCKS_LOG_TRACE(rep_->ioptions.trace_log, "%s\t1", key.ToString(true).c_str());
         break;
       } else {
-        fprintf(stderr, "\tBloom:NotUseful");
+        // fprintf(stderr, "\tBloom:NotUseful");
+        ROCKS_LOG_TRACE(rep_->ioptions.trace_log, "%s\t0", key.ToString(true).c_str());
         BlockIter biter;
         NewDataBlockIterator(rep_, read_options, iiter->value(), &biter, false,
                              get_context);

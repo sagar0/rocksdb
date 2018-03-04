@@ -50,5 +50,4 @@
                        ##__VA_ARGS__)
 
 #define ROCKS_LOG_TRACE(LGR, FMT, ...)                                \
-  rocksdb::Log(InfoLogLevel::INFO_LEVEL, LGR, PREPEND_FILE_LINE(FMT), \
-               ##__VA_ARGS__)
+  rocksdb::Log(InfoLogLevel::INFO_LEVEL, LGR, FMT,  ##__VA_ARGS__)

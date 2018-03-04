@@ -39,6 +39,7 @@ DBOptions BuildDBOptions(const ImmutableDBOptions& immutable_db_options,
   options.rate_limiter = immutable_db_options.rate_limiter;
   options.sst_file_manager = immutable_db_options.sst_file_manager;
   options.info_log = immutable_db_options.info_log;
+  options.trace_log = immutable_db_options.trace_log;
   options.info_log_level = immutable_db_options.info_log_level;
   options.max_open_files = mutable_db_options.max_open_files;
   options.max_file_opening_threads =
