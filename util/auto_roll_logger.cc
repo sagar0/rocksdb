@@ -39,8 +39,13 @@ void AutoRollLogger::RollLogFile() {
   uint64_t now = env_->NowMicros();
   std::string old_fname;
   do {
-    old_fname = OldInfoLogFileName(
-      dbname_, now, db_absolute_path_, db_log_dir_);
+    if (is_trace_) {
+      old_fname = OldTraceLogFileName(
+        dbname_, now, db_absolute_path_, db_log_dir_);
+    } else {
+      old_fname = OldInfoLogFileName(
+        dbname_, now, db_absolute_path_, db_log_dir_);
+    }
     now++;
   } while (env_->FileExists(old_fname).ok());
   env_->RenameFile(log_fname_, old_fname);
@@ -166,6 +171,47 @@ Status CreateLoggerFromOptions(const std::string& dbname,
   // Open a log file in the same directory as the db
   env->RenameFile(fname,
                   OldInfoLogFileName(dbname, env->NowMicros(), db_absolute_path,
+                                     options.db_log_dir));
+  auto s = env->NewLogger(fname, logger);
+  if (logger->get() != nullptr) {
+    (*logger)->SetInfoLogLevel(options.info_log_level);
+  }
+  return s;
+}
+
+Status CreateTracerFromOptions(const std::string& dbname,
+                               const DBOptions& options,
+                               std::shared_ptr<Logger>* logger) {
+  if (options.trace_log) {
+    *logger = options.trace_log;
+    return Status::OK();
+  }
+
+  Env* env = options.env;
+  std::string db_absolute_path;
+  env->GetAbsolutePath(dbname, &db_absolute_path);
+  std::string fname =
+      TraceLogFileName(dbname, db_absolute_path, options.db_log_dir);
+
+  env->CreateDirIfMissing(dbname);  // In case it does not exist
+  // Currently we only support roll by time-to-roll and log size
+#ifndef ROCKSDB_LITE
+  if (options.log_file_time_to_roll > 0 || options.max_log_file_size > 0) {
+    AutoRollLogger* result = new AutoRollLogger(
+        env, dbname, options.db_log_dir, options.max_log_file_size,
+        options.log_file_time_to_roll, options.info_log_level, true /* is_trace */);
+    Status s = result->GetStatus();
+    if (!s.ok()) {
+      delete result;
+    } else {
+      logger->reset(result);
+    }
+    return s;
+  }
+#endif  // !ROCKSDB_LITE
+  // Open a log file in the same directory as the db
+  env->RenameFile(fname,
+                  OldTraceLogFileName(dbname, env->NowMicros(), db_absolute_path,
                                      options.db_log_dir));
   auto s = env->NewLogger(fname, logger);
   if (logger->get() != nullptr) {

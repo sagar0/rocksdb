@@ -31,6 +31,7 @@ ImmutableDBOptions::ImmutableDBOptions(const DBOptions& options)
       rate_limiter(options.rate_limiter),
       sst_file_manager(options.sst_file_manager),
       info_log(options.info_log),
+      trace_log(options.trace_log),
       info_log_level(options.info_log_level),
       max_file_opening_threads(options.max_file_opening_threads),
       statistics(options.statistics),
@@ -99,6 +100,8 @@ void ImmutableDBOptions::Dump(Logger* log) const {
                    env);
   ROCKS_LOG_HEADER(log, "                               Options.info_log: %p",
                    info_log.get());
+  ROCKS_LOG_HEADER(trace_log, "                        Options.trace_log: %p",
+                   trace_log.get());
   ROCKS_LOG_HEADER(log, "               Options.max_file_opening_threads: %d",
                    max_file_opening_threads);
   ROCKS_LOG_HEADER(log, "                             Options.statistics: %p",

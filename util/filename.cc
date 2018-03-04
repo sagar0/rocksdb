@@ -61,6 +61,35 @@ static size_t GetInfoLogPrefix(const std::string& path, char* dest, int len) {
   return write_idx;
 }
 
+static size_t GetTraceLogPrefix(const std::string& path, char* dest, int len) {
+  const char suffix[] = "_TRACE";
+
+  size_t write_idx = 0;
+  size_t i = 0;
+  size_t src_len = path.size();
+
+  while (i < src_len && write_idx < len - sizeof(suffix)) {
+    if ((path[i] >= 'a' && path[i] <= 'z') ||
+        (path[i] >= '0' && path[i] <= '9') ||
+        (path[i] >= 'A' && path[i] <= 'Z') ||
+        path[i] == '-' ||
+        path[i] == '.' ||
+        path[i] == '_'){
+      dest[write_idx++] = path[i];
+    } else {
+      if (i > 0) {
+        dest[write_idx++] = '_';
+      }
+    }
+    i++;
+  }
+  assert(sizeof(suffix) <= len - write_idx);
+  // "\0" is automatically added by snprintf
+  snprintf(dest + write_idx, len - write_idx, suffix);
+  write_idx += sizeof(suffix) - 1;
+  return write_idx;
+}
+
 static std::string MakeFileName(const std::string& name, uint64_t number,
                                 const char* suffix) {
   char buf[100];
@@ -193,6 +222,43 @@ std::string OldInfoLogFileName(const std::string& dbname, uint64_t ts,
   return log_dir + "/" + info_log_prefix.buf + ".old." + buf;
 }
 
+TraceLogPrefix::TraceLogPrefix(bool has_log_dir,
+                               const std::string& db_absolute_path) {
+  if (!has_log_dir) {
+    const char kTraceLogPrefix[] = "TRACE";
+    // "\0" is automatically added to the end
+    snprintf(buf, sizeof(buf), kTraceLogPrefix);
+    prefix = Slice(buf, sizeof(kTraceLogPrefix) - 1);
+  } else {
+    size_t len = GetTraceLogPrefix(db_absolute_path, buf, sizeof(buf));
+    prefix = Slice(buf, len);
+  }
+}
+
+std::string TraceLogFileName(const std::string& dbname,
+    const std::string& db_path, const std::string& trace_dir) {
+  if (trace_dir.empty()) {
+    return dbname + "/TRACE";
+  }
+
+  TraceLogPrefix trace_log_prefix(true, db_path);
+  return trace_dir + "/" + trace_log_prefix.buf;
+}
+
+// Return the name of the old trace file for "dbname".
+std::string OldTraceLogFileName(const std::string& dbname, uint64_t ts,
+    const std::string& db_path, const std::string& log_dir) {
+  char buf[50];
+  snprintf(buf, sizeof(buf), "%llu", static_cast<unsigned long long>(ts));
+
+  if (log_dir.empty()) {
+    return dbname + "/TRACE.old." + buf;
+  }
+
+  TraceLogPrefix trace_log_prefix(true, db_path);
+  return log_dir + "/" + trace_log_prefix.buf + ".old." + buf;
+}
+
 std::string OptionsFileName(const std::string& dbname, uint64_t file_num) {
   char buffer[256];
   snprintf(buffer, sizeof(buffer), "%s%06" PRIu64,
@@ -237,10 +303,6 @@ bool ParseFileName(const std::string& fname,
                    FileType* type,
                    WalFileType* log_type) {
   return ParseFileName(fname, number, "", type, log_type);
-}
-
-std::string TraceFileName(const std::string& dbname) {
-  return dbname + "/TRACE";
 }
 
 bool ParseFileName(const std::string& fname, uint64_t* number,

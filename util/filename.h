@@ -120,6 +120,27 @@ extern std::string OldInfoLogFileName(const std::string& dbname, uint64_t ts,
                                       const std::string& db_path = "",
                                       const std::string& log_dir = "");
 
+
+// A helper structure for prefix of info log names.
+struct TraceLogPrefix {
+  char buf[260];
+  Slice prefix;
+  // Prefix with DB absolute path encoded
+  explicit TraceLogPrefix(bool has_log_dir, const std::string& db_absolute_path);
+  // Default Prefix
+  explicit TraceLogPrefix();
+};
+
+// Return the name of the trace log file for "dbname".
+extern std::string TraceLogFileName(const std::string& dbname,
+                                   const std::string& db_path = "",
+                                   const std::string& log_dir = "");
+
+// Return the name of the old trace log file for "dbname".
+extern std::string OldTraceLogFileName(const std::string& dbname, uint64_t ts,
+                                      const std::string& db_path = "",
+                                      const std::string& log_dir = "");
+
 static const std::string kOptionsFileNamePrefix = "OPTIONS-";
 static const std::string kTempFileNameSuffix = "dbtmp";
 
@@ -142,9 +163,6 @@ extern std::string MetaDatabaseName(const std::string& dbname,
 // that will get regenerated if the db loses all its data and is recreated fresh
 // either from a backup-image or empty
 extern std::string IdentityFileName(const std::string& dbname);
-
-// Return the name of the Trace file.
-extern std::string TraceFileName(const std::string& dbname);
 
 // If filename is a rocksdb file, store the type of the file in *type.
 // The number encoded in the filename is stored in *number.  If the

@@ -174,7 +174,7 @@ TEST_F(FileNameTest, Construction) {
   ASSERT_EQ(100U, number);
   ASSERT_EQ(kMetaDatabase, type);
 
-  fname = TraceFileName("foo");
+  fname = TraceLogFileName("foo");
   ASSERT_EQ("foo/", std::string(fname.data(), 4));
   ASSERT_TRUE(ParseFileName(fname.c_str() + 4, &number, &type));
   ASSERT_EQ(0U, number);
