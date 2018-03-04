@@ -186,6 +186,7 @@ TEST_F(OptionsSettableTest, DBOptionsAllFieldsSettable) {
       {offsetof(struct DBOptions, sst_file_manager),
        sizeof(std::shared_ptr<SstFileManager>)},
       {offsetof(struct DBOptions, info_log), sizeof(std::shared_ptr<Logger>)},
+      {offsetof(struct DBOptions, trace_log), sizeof(std::shared_ptr<Logger>)},
       {offsetof(struct DBOptions, statistics),
        sizeof(std::shared_ptr<Statistics>)},
       {offsetof(struct DBOptions, db_paths), sizeof(std::vector<DbPath>)},

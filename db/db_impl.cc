@@ -1049,7 +1049,11 @@ Status DBImpl::GetImpl(const ReadOptions& read_options,
   // }
 
   // Trace
-  fprintf(stderr, "\nDBImpl::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString(true).c_str());
+  // fprintf(stderr, "\nDBImpl::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString(true).c_str());
+  /*
+  ROCKS_LOG_TRACE(immutable_db_options_.trace_log, "Get\t%s\t%s",
+      cfd->GetName().c_str(), key.ToString(true).c_str());
+  */
 
   // Acquire SuperVersion
   SuperVersion* sv = GetAndRefSuperVersion(cfd);
