@@ -25,7 +25,8 @@ class AutoRollLogger : public Logger {
   AutoRollLogger(Env* env, const std::string& dbname,
                  const std::string& db_log_dir, size_t log_max_size,
                  size_t log_file_time_to_roll,
-                 const InfoLogLevel log_level = InfoLogLevel::INFO_LEVEL)
+                 const InfoLogLevel log_level = InfoLogLevel::INFO_LEVEL,
+                 bool is_trace = false)
       : Logger(log_level),
         dbname_(dbname),
         db_log_dir_(db_log_dir),
@@ -37,7 +38,8 @@ class AutoRollLogger : public Logger {
         ctime_(cached_now),
         cached_now_access_count(0),
         call_NowMicros_every_N_records_(100),
-        mutex_() {
+        mutex_(),
+        is_trace_(is_trace) {
     env->GetAbsolutePath(dbname, &db_absolute_path_);
     log_fname_ = InfoLogFileName(dbname_, db_absolute_path_, db_log_dir_);
     RollLogFile();
@@ -134,11 +136,16 @@ class AutoRollLogger : public Logger {
   uint64_t cached_now_access_count;
   uint64_t call_NowMicros_every_N_records_;
   mutable port::Mutex mutex_;
+  bool is_trace_;
 };
 #endif  // !ROCKSDB_LITE
 
 // Facade to craete logger automatically
 Status CreateLoggerFromOptions(const std::string& dbname,
+                               const DBOptions& options,
+                               std::shared_ptr<Logger>* logger);
+
+Status CreateTracerFromOptions(const std::string& dbname,
                                const DBOptions& options,
                                std::shared_ptr<Logger>* logger);
 

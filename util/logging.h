@@ -48,3 +48,7 @@
 #define ROCKS_LOG_BUFFER_MAX_SZ(LOG_BUF, MAX_LOG_SIZE, FMT, ...)      \
   rocksdb::LogToBuffer(LOG_BUF, MAX_LOG_SIZE, PREPEND_FILE_LINE(FMT), \
                        ##__VA_ARGS__)
+
+#define ROCKS_LOG_TRACE(LGR, FMT, ...)                                \
+  rocksdb::Log(InfoLogLevel::INFO_LEVEL, LGR, PREPEND_FILE_LINE(FMT), \
+               ##__VA_ARGS__)

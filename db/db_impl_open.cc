@@ -51,6 +51,14 @@ DBOptions SanitizeOptions(const std::string& dbname, const DBOptions& src) {
     }
   }
 
+  if (result.trace_log == nullptr) {
+    Status s = CreateTracerFromOptions(dbname, result, &result.trace_log);
+    if (!s.ok()) {
+      // No place suitable for tracing
+      result.trace_log = nullptr;
+    }
+  }
+
   if (!result.write_buffer_manager) {
     result.write_buffer_manager.reset(
         new WriteBufferManager(result.db_write_buffer_size));
