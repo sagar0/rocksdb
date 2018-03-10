@@ -1808,8 +1808,8 @@ std::unordered_map<std::string, OptionTypeInfo>
           OptionType::kCompactionOptionsUniversal,
           OptionVerificationType::kNormal, true,
           offsetof(struct MutableCFOptions, compaction_options_universal)}},
-        {"level_compaction_untouched_files_ttl",
-         {offset_of(&ColumnFamilyOptions::level_compaction_untouched_files_ttl),
+        {"ttl",
+         {offset_of(&ColumnFamilyOptions::ttl),
           OptionType::kUInt64T, OptionVerificationType::kNormal, false, 0}}};
 
 std::unordered_map<std::string, OptionTypeInfo>
