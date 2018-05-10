@@ -54,6 +54,13 @@ Status DBImpl::Write(const WriteOptions& write_options, WriteBatch* my_batch) {
   return WriteImpl(write_options, my_batch, nullptr, nullptr);
 }
 
+/*
+void DBImpl::Trace(int type, Slice& data) {
+  fprintf(stderr, "%d\t%s\n", type, data.ToString(true).c_str());
+  ROCKS_LOG_TRACE(immutable_db_options_.trace_log, "%d\t%s", type, data.ToString(true).c_str());
+}
+*/
+
 #ifndef ROCKSDB_LITE
 Status DBImpl::WriteWithCallback(const WriteOptions& write_options,
                                  WriteBatch* my_batch,
@@ -71,10 +78,22 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
                          bool disable_memtable, uint64_t* seq_used,
                          size_t batch_cnt,
                          PreReleaseCallback* pre_release_callback) {
+  // Trace
+  /*
+  fprintf(stderr, "Write\t%d:%s\n", my_batch->HasPut(), Slice(my_batch->Data()).ToString(true).c_str());
+  ROCKS_LOG_TRACE(immutable_db_options_.trace_log, "Write\t%s", Slice(my_batch->Data()).ToString(true).c_str());
+  */
+
   assert(!seq_per_batch_ || batch_cnt != 0);
   if (my_batch == nullptr) {
     return Status::Corruption("Batch is nullptr!");
   }
+
+  Trace(1, my_batch->Data());
+  if (tracer_) {
+    tracer_->TraceWrite(my_batch);
+  }
+
   if (write_options.sync && write_options.disableWAL) {
     return Status::InvalidArgument("Sync writes has to enable WAL.");
   }

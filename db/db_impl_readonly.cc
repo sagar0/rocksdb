@@ -37,10 +37,15 @@ Status DBImplReadOnly::Get(const ReadOptions& read_options,
   auto cfd = cfh->cfd();
 
   // Trace
-  // fprintf(stderr, "\nDBImplReadOnly::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString(true).c_str());
+  // Trace(2, cfd->GetName(), key);
+  Trace(2, key);
+  if (tracer_) {
+    tracer_->TraceGet(key);
+  }
   /*
+  fprintf(stderr, "\nDBImplReadOnly::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString().c_str());
   ROCKS_LOG_TRACE(immutable_db_options_.trace_log, "Get\t%s\t%s",
-      cfd->GetName().c_str(), key.ToString(true).c_str());
+      cfd->GetName().c_str(), key.ToString().c_str());
   */
 
   SuperVersion* super_version = cfd->GetSuperVersion();

@@ -220,6 +220,7 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
       closed_(false) {
   env_->GetAbsolutePath(dbname, &db_absolute_path_);
 
+  /*
   std::unique_ptr<WritableFile> trace_file;
   std::string fname = "/dev/shm/rocksdb.trace";
   //Status s = env_->NewWritableFile("/dev/shm/rocksdb.trace", &trace_file, env_options_);
@@ -228,6 +229,8 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
     trace_writer_.reset(new WritableFileWriter(std::move(trace_file),
                                                env_options_, nullptr));
   }
+  */
+  // StartTrace("/dev/shm/rocksdb.trace");
 
   // Reserve ten files or so for other uses and give the rest to TableCache.
   // Give a large number for setting of "infinite" open files.
@@ -1049,10 +1052,15 @@ Status DBImpl::GetImpl(const ReadOptions& read_options,
   // }
 
   // Trace
-  // fprintf(stderr, "\nDBImpl::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString(true).c_str());
+  // Trace(2, cfd->GetName(), key);
+  Trace(2, key);
+  if (tracer_) {
+    tracer_->TraceGet(key);
+  }
   /*
+  fprintf(stderr, "\nDBImpl::Get\t%s\t%s", cfd->GetName().c_str(), key.ToString().c_str());
   ROCKS_LOG_TRACE(immutable_db_options_.trace_log, "Get\t%s\t%s",
-      cfd->GetName().c_str(), key.ToString(true).c_str());
+      cfd->GetName().c_str(), key.ToString().c_str());
   */
 
   // Acquire SuperVersion
@@ -3050,6 +3058,65 @@ void DBImpl::WaitForIngestFile() {
   while (num_running_ingest_file_ > 0) {
     bg_cv_.Wait();
   }
+}
+
+Status DBImpl::StartTrace(const TraceOptions& /* options */, const std::string& trace_filename) {
+  EnvOptions env_options;
+  unique_ptr<WritableFile> trace_file;
+  Status s = env_->NewWritableFile(trace_filename, &trace_file, env_options);
+  if (s.ok()) {
+    unique_ptr<WritableFileWriter> file_writer;
+    file_writer.reset(new WritableFileWriter(std::move(trace_file), env_options));
+    unique_ptr<TraceWriter> trace_writer;
+    trace_writer.reset(new TraceWriter(env_, std::move(file_writer)));
+
+    tracer_.reset(new Tracer(env_, std::move(trace_writer)));
+    return Status::OK();
+  }
+  return s;
+}
+
+Status DBImpl::EndTrace(const TraceOptions& /* options */) {
+  Status s = tracer_->Close();
+  tracer_.reset();
+  return s;
+}
+
+Status DBImpl::StartReplay(const ReplayOptions& /* options */, const std::string& trace_filename) {
+  EnvOptions env_options;
+  unique_ptr<RandomAccessFile> trace_file;
+  Status s = env_->NewRandomAccessFile(trace_filename, &trace_file, env_options);
+  if (s.ok()) {
+    unique_ptr<RandomAccessFileReader> trace_file_reader;
+    trace_file_reader.reset(new RandomAccessFileReader(std::move(trace_file), trace_filename));
+    unique_ptr<TraceReader> trace_reader;
+    trace_reader.reset(new TraceReader(std::move(trace_file_reader)));
+    replayer_.reset(new Replayer(this, std::move(trace_reader)));
+    return Status::OK();
+  }
+  return s;
+}
+
+Status DBImpl::EndReplay(const ReplayOptions& /* options */) {
+  replayer_.reset();
+  return Status::OK();
+}
+
+// Types:
+// 1 - Write
+// 2 - Get
+void DBImpl::Trace(int type, Slice data) {
+  // fprintf(stderr,
+  //     "%d\t%s\n", type, data.ToString(true).c_str());
+  ROCKS_LOG_TRACE(immutable_db_options_.trace_log,
+      "%d\t%s", type, data.ToString(true).c_str());
+}
+
+void DBImpl::Trace(int type, std::string cfname, Slice data) {
+  // fprintf(stderr,
+  //    "%d\t%s\t%s\n", type, cfname.c_str(), data.ToString(true).c_str());
+  ROCKS_LOG_TRACE(immutable_db_options_.trace_log,
+      "%d\t%s\t%s", type, cfname.c_str(), data.ToString(true).c_str());
 }
 
 #endif  // ROCKSDB_LITE

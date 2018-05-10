@@ -51,6 +51,7 @@
 #include "util/hash.h"
 #include "util/stop_watch.h"
 #include "util/thread_local.h"
+#include "util/trace_replay.h"
 
 namespace rocksdb {
 
@@ -65,6 +66,7 @@ class WriteCallback;
 struct JobContext;
 struct ExternalSstFileInfo;
 struct MemTableInfo;
+struct TraceOptions;
 
 class DBImpl : public DB {
  public:
@@ -270,6 +272,11 @@ class DBImpl : public DB {
 
   Status PromoteL0(ColumnFamilyHandle* column_family,
                    int target_level) override;
+
+  virtual Status StartTrace(const TraceOptions& options, const std::string& trace_filename) override;
+  virtual Status EndTrace(const TraceOptions& options) override;
+  virtual Status StartReplay(const ReplayOptions& options, const std::string& trace_filename) override;
+  virtual Status EndReplay(const ReplayOptions &options) override;
 
   // Similar to Write() but will call the callback once on the single write
   // thread to determine whether it is safe to perform the write.
@@ -640,6 +647,11 @@ class DBImpl : public DB {
   static Status CreateAndNewDirectory(Env* env, const std::string& dirname,
                                       std::unique_ptr<Directory>* directory);
 
+  // Status StartTrace(TraceOptions& options, const std::string& trace_filename);
+  // Status EndTrace(TraceOptions& options);
+  // Status StartReplay(TraceOptions& options, const std::string& trace_filename);
+  // Status EndReplay(TraceOptions &options);
+
  protected:
   Env* const env_;
   const std::string dbname_;
@@ -654,7 +666,9 @@ class DBImpl : public DB {
       recovered_transactions_;
 
   InstrumentedMutex trace_file_mutex_;
-  std::unique_ptr<WritableFileWriter> trace_writer_;
+  //std::unique_ptr<WritableFileWriter> trace_writer_;
+  std::unique_ptr<Tracer> tracer_;
+  std::unique_ptr<Replayer> replayer_;
 
   // Except in DB::Open(), WriteOptionsFile can only be called when:
   // Persist options to options file.
@@ -739,6 +753,9 @@ class DBImpl : public DB {
 
   // Actual implementation of Close()
   Status CloseImpl();
+
+  void Trace(int type, Slice data);
+  void Trace(int type, std::string cfname, Slice data);
 
  private:
   friend class DB;
