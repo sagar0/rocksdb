@@ -58,6 +58,9 @@ class BlockBasedTableFactory : public TableFactory {
 
   void* GetOptions() override { return &table_options_; }
 
+  Status SetOptions(
+    const std::unordered_map<std::string, std::string>& new_options) override;
+
   bool IsDeleteRangeSupported() const override { return true; }
 
   static const std::string kName;

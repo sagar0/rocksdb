@@ -502,6 +502,12 @@ class TableFactory {
   // options while the DB is open.
   virtual void* GetOptions() { return nullptr; }
 
+  virtual Status SetOptions(
+     const std::unordered_map<std::string, std::string>& /*new_options*/) {
+   return Status::NotSupported(
+       "The table factory doesn't implement SetOptions().");
+ }
+
   // Return is delete range supported
   virtual bool IsDeleteRangeSupported() const { return false; }
 };

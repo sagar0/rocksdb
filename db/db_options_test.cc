@@ -117,6 +117,28 @@ TEST_F(DBOptionsTest, GetLatestCFOptions) {
             GetMutableCFOptionsMap(dbfull()->GetOptions(handles_[1])));
 }
 
+TEST_F(DBOptionsTest, ChangeTableOptions) {
+  const size_t kValueSize = 1024 * 1024;  // 1MB
+  Options options = CurrentOptions();
+  options.create_if_missing = true;
+  options.bytes_per_sync = 1024 * 1024;
+  options.use_direct_reads = false;
+  options.write_buffer_size = 400 * kValueSize;
+  options.disable_auto_compactions = true;
+  options.compression = kNoCompression;
+  options.env = env_;
+  DestroyAndReopen(options);
+
+  const auto& table_factory = (dbfull()->GetOptions()).table_factory;
+  BlockBasedTableOptions* old_bbto =
+      reinterpret_cast<BlockBasedTableOptions*>(table_factory->GetOptions());
+  ASSERT_EQ(4096, old_bbto->block_size);
+  table_factory->SetOptions({{"block_size", "8192"}});
+  BlockBasedTableOptions* new_bbto =
+      reinterpret_cast<BlockBasedTableOptions*>(table_factory->GetOptions());
+  ASSERT_EQ(8192, new_bbto->block_size);
+}
+
 TEST_F(DBOptionsTest, SetBytesPerSync) {
   const size_t kValueSize = 1024 * 1024;  // 1MB
   Options options;

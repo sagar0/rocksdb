@@ -608,8 +608,16 @@ bool SerializeSingleOptionHelper(const char* opt_address,
       const auto* table_factory_ptr =
           reinterpret_cast<const std::shared_ptr<const TableFactory>*>(
               opt_address);
-      *value = table_factory_ptr->get() ? table_factory_ptr->get()->Name()
-                                        : kNullptrString;
+      if (table_factory_ptr->get() == nullptr) {
+        *value = kNullptrString;
+      }
+
+      std::string table_opt_str;
+      Status s = table_factory_ptr->get()->GetOptionString(&table_opt_str, ";");
+      if (!s.ok()) {
+        return false;
+      }
+      *value = "{" + table_opt_str + "}";
       break;
     }
     case OptionType::kComparator: {
@@ -1834,8 +1842,7 @@ std::unordered_map<std::string, OptionTypeInfo>
           false, 0}},
         {"table_factory",
          {offset_of(&ColumnFamilyOptions::table_factory),
-          OptionType::kTableFactory, OptionVerificationType::kByName, false,
-          0}},
+          OptionType::kTableFactory, OptionVerificationType::kByName, true, 0}},
         {"compaction_filter",
          {offset_of(&ColumnFamilyOptions::compaction_filter),
           OptionType::kCompactionFilter, OptionVerificationType::kByName, false,

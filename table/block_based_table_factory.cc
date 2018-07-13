@@ -247,6 +247,37 @@ std::string BlockBasedTableFactory::GetPrintableTableOptions() const {
   return ret;
 }
 
+
+Status BlockBasedTableFactory::SetOptions(
+    const std::unordered_map<std::string, std::string>& options_map) {
+#ifdef ROCKSDB_LITE
+  (void)options_map;
+  return Status::NotSupported("Not supported in ROCKSDB LITE");
+#else
+  if (options_map.empty()) {
+    // ROCKS_LOG_WARN(immutable_db_options_.info_log,
+    //                "SetOptions() on table factory, empty input",
+    //                cfd->GetName().c_str());
+    return Status::InvalidArgument("SetOptions() on table factory, empty input");
+  }
+
+  Status s;
+  BlockBasedTableOptions new_table_options;
+  s = GetBlockBasedTableOptionsFromMap(table_options_, options_map, &new_table_options);
+  if (!s.ok()) {
+    return s;
+  }
+
+  // WARN: DON'T CHECKIN WITHOUT INTRODUCING A MUTEX HERE. Get a mutex.
+  if (new_table_options.block_size != table_options_.block_size) {
+    fprintf(stderr, "Options changed: old block size: %ld, new block_size: %ld\n",
+        table_options_.block_size, new_table_options.block_size);
+    table_options_.block_size = new_table_options.block_size;
+  }
+  return s;
+#endif
+}
+
 #ifndef ROCKSDB_LITE
 namespace {
 bool SerializeSingleBlockBasedTableOption(
