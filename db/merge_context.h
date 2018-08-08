@@ -84,6 +84,15 @@ class MergeContext {
     return *operand_list_;
   }
 
+  // Return all the operands.
+  const std::vector<Slice>& GetOperandsBackward() {
+    if (!operand_list_) {
+      return empty_operand_list;
+    }
+
+    return *operand_list_;
+  }
+
  private:
   void Initialize() {
     if (!operand_list_) {
