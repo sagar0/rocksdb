@@ -16,6 +16,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "rocksdb/async/callables.h"
 #include "rocksdb/iterator.h"
 #include "rocksdb/listener.h"
 #include "rocksdb/metadata.h"
@@ -345,6 +346,17 @@ class DB {
                      PinnableSlice* value) = 0;
   virtual Status Get(const ReadOptions& options, const Slice& key, std::string* value) {
     return Get(options, DefaultColumnFamily(), key, value);
+  }
+  // Async versions
+  using GetCallback = async::Callable<Status, const Status&>;
+  virtual Status Get(const GetCallback& /*cb*/, const ReadOptions& /*options*/,
+                     ColumnFamilyHandle* /*column_family*/, const Slice& /*key*/,
+                     std::string* /*value*/) {
+    return Status::NotSupported();
+  }
+  virtual Status Get(const GetCallback& cb, const ReadOptions& options,
+                     const Slice& key, std::string* value) {
+   return Get(cb, options, DefaultColumnFamily(), key, value);
   }
 
   // If keys[i] does not exist in the database, then the i'th returned
