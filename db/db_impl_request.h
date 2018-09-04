@@ -24,7 +24,7 @@ struct SuperVersion;
 namespace async {
 
 namespace db_impl_request_details {
-template<typename U, typename B>
+template <typename U, typename B>
 inline U* SafeCast(B* b) {
 #ifdef _DEBUG
   U* result = dynamic_cast<U*>(b);
@@ -34,7 +34,7 @@ inline U* SafeCast(B* b) {
 #endif
   return result;
 }
-}
+}  // namespace db_impl_request_details
 
 // DB::Get() async implementation for DBImpl
 class DBImplGetContext : private AsyncStatusCapture {
@@ -50,9 +50,9 @@ class DBImplGetContext : private AsyncStatusCapture {
                            bool* is_blob_index = nullptr) {
     assert(!pinnable_input || !value);
     DBImpl* db_impl = db_impl_request_details::SafeCast<DBImpl>(db);
-    std::unique_ptr<DBImplGetContext> context(new DBImplGetContext(cb, db_impl,
-        read_options, key, value, pinnable_input, column_family, value_found,
-        read_cb, is_blob_index));
+    std::unique_ptr<DBImplGetContext> context(new DBImplGetContext(
+        cb, db_impl, read_options, key, value, pinnable_input, column_family,
+        value_found, read_cb, is_blob_index));
     Status s = context->GetImpl();
 
     // ??? sagar0
@@ -162,23 +162,23 @@ class DBImplGetContext : private AsyncStatusCapture {
     return status;
   }
 
-  Callback            cb_;
-  DBImpl*             db_impl_;
-  ReadOptions         read_options_;
-  Slice               key_;
-  std::string*        value_;
-  bool*               value_found_;
-  ReadCallback*       read_cb_;
-  bool*               is_blob_index_;
-  ColumnFamilyData*   cfd_;
-  SuperVersion*       sv_;
-  StopWatch           sw_;
-  MergeContext        merge_context_;
-  PinnableSlice*      pinnable_val_input_; // External for sync
-  std::aligned_storage<sizeof(PinnableSlice)>::type      pinnable_val_;
+  Callback cb_;
+  DBImpl* db_impl_;
+  ReadOptions read_options_;
+  Slice key_;
+  std::string* value_;
+  bool* value_found_;
+  ReadCallback* read_cb_;
+  bool* is_blob_index_;
+  ColumnFamilyData* cfd_;
+  SuperVersion* sv_;
+  StopWatch sw_;
+  MergeContext merge_context_;
+  PinnableSlice* pinnable_val_input_;  // External for sync
+  std::aligned_storage<sizeof(PinnableSlice)>::type pinnable_val_;
   std::aligned_storage<sizeof(RangeDelAggregator)>::type range_del_agg_;
-  std::aligned_storage<sizeof(LookupKey)>::type          lookup_key_;
+  std::aligned_storage<sizeof(LookupKey)>::type lookup_key_;
 };
 
-} // async
-} // rocksdb
+}  // namespace async
+}  // namespace rocksdb

@@ -10,14 +10,24 @@ namespace rocksdb {
 namespace async {
 
 DBImplGetContext::DBImplGetContext(const Callback& cb, DBImpl* db,
-    const ReadOptions& ro, const Slice& key, std::string* value,
-    PinnableSlice* pinnable_input, ColumnFamilyHandle* column_family, bool* value_found,
-    ReadCallback* read_cb, bool* is_blob_index) :
-        cb_(cb), db_impl_(db), read_options_(ro), key_(key), value_(value),
-        value_found_(value_found), read_cb_(read_cb),
-        is_blob_index_(is_blob_index), cfd_(nullptr), sv_(nullptr),
-        sw_(db_impl_->env_, db_impl_->stats_, DB_GET),
-        pinnable_val_input_(nullptr) {
+                                   const ReadOptions& ro, const Slice& key,
+                                   std::string* value,
+                                   PinnableSlice* pinnable_input,
+                                   ColumnFamilyHandle* column_family,
+                                   bool* value_found, ReadCallback* read_cb,
+                                   bool* is_blob_index)
+    : cb_(cb),
+      db_impl_(db),
+      read_options_(ro),
+      key_(key),
+      value_(value),
+      value_found_(value_found),
+      read_cb_(read_cb),
+      is_blob_index_(is_blob_index),
+      cfd_(nullptr),
+      sv_(nullptr),
+      sw_(db_impl_->env_, db_impl_->stats_, DB_GET),
+      pinnable_val_input_(nullptr) {
   PERF_TIMER_GUARD(get_snapshot_time);
 
   auto cfh = reinterpret_cast<ColumnFamilyHandleImpl*>(column_family);
@@ -76,8 +86,9 @@ Status DBImplGetContext::GetImpl() {
   // First look in the memtable, then in the immutable memtable (if any).
   // s is both in/out. When in, s could either be OK or MergeInProgress.
   // merge_operands will contain the sequence of merges in the latter case.
-  bool skip_memtable = (read_options_.read_tier == kPersistedTier &&
-                        db_impl_->has_unpersisted_data_.load(std::memory_order_relaxed));
+  bool skip_memtable =
+      (read_options_.read_tier == kPersistedTier &&
+       db_impl_->has_unpersisted_data_.load(std::memory_order_relaxed));
   bool done = false;
   if (!skip_memtable) {
     if (sv_->mem->Get(GetLookupKey(), GetPinnable().GetSelf(), &s,
@@ -88,8 +99,8 @@ Status DBImplGetContext::GetImpl() {
       RecordTick(db_impl_->stats_, MEMTABLE_HIT);
     } else if ((s.ok() || s.IsMergeInProgress()) &&
                sv_->imm->Get(GetLookupKey(), GetPinnable().GetSelf(), &s,
-               &merge_context_, &GetRangeDel(), read_options_, read_cb_,
-               is_blob_index_)) {
+                             &merge_context_, &GetRangeDel(), read_options_,
+                             read_cb_, is_blob_index_)) {
       done = true;
       GetPinnable().GetSelf();
       RecordTick(db_impl_->stats_, MEMTABLE_HIT);
@@ -103,19 +114,22 @@ Status DBImplGetContext::GetImpl() {
     PERF_TIMER_GUARD(get_from_output_files_time);
     if (cb_) {
       // CallableFactory<DBImplGetContext, Status, const Status&> fac(this);
-      // auto on_get_complete = fac.GetCallable<&DBImplGetContext::OnGetComplete>();
-      // s = VersionSetGetContext::RequestGet(on_get_complete, sv_->current,
+      // auto on_get_complete =
+      // fac.GetCallable<&DBImplGetContext::OnGetComplete>(); s =
+      // VersionSetGetContext::RequestGet(on_get_complete, sv_->current,
       //                                     read_options_, GetLookupKey(),
-      //                                     &GetPinnable(), &s, &merge_context_,
-      //                                     &GetRangeDel(), value_found_, nullptr,
-      //                                     nullptr, read_cb_, is_blob_index_);
+      //                                     &GetPinnable(), &s,
+      //                                     &merge_context_, &GetRangeDel(),
+      //                                     value_found_, nullptr, nullptr,
+      //                                     read_cb_, is_blob_index_);
       sv_->current->Get(read_options_, GetLookupKey(), &GetPinnable(), &s,
                         &merge_context_, &GetRangeDel(), value_found_, nullptr,
                         nullptr, read_cb_, is_blob_index_);
     } else {
       // Sync -- unused for now
 
-      // s = VersionSetGetContext::Get(sv_->current, read_options_, GetLookupKey(),
+      // s = VersionSetGetContext::Get(sv_->current, read_options_,
+      // GetLookupKey(),
       //                               &GetPinnable(), &s, &merge_context_,
       //                               &GetRangeDel(), value_found_, nullptr,
       //                               nullptr, read_cb_, is_blob_index_);
@@ -128,5 +142,5 @@ Status DBImplGetContext::GetImpl() {
   return OnGetComplete(s);
 }
 
-} // async
-} // rocksdb
+}  // namespace async
+}  // namespace rocksdb
