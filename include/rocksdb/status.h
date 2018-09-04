@@ -25,7 +25,7 @@ namespace rocksdb {
 class Status {
  public:
   // Create a success status.
-  Status() : code_(kOk), subcode_(kNone), sev_(kNoError), state_(nullptr) {}
+  Status() : code_(kOk), subcode_(kNone), sev_(kNoError), state_(nullptr), async_(false) {}
   ~Status() { delete[] state_; }
 
   // Copy the specified status.
@@ -59,7 +59,8 @@ class Status {
     kBusy = 11,
     kExpired = 12,
     kTryAgain = 13,
-    kCompactionTooLarge = 14
+    kCompactionTooLarge = 14,
+    kIOPending = 15
   };
 
   Code code() const { return code_; }
@@ -74,6 +75,7 @@ class Status {
     kStaleFile = 6,
     kMemoryLimit = 7,
     kSpaceLimit = 8,
+    kOnComplete = 9,
     kMaxSubCode
   };
 
@@ -93,6 +95,10 @@ class Status {
 
   // Returns a C style string indicating the message of the Status
   const char* getState() const { return state_; }
+
+  bool async() const { return async_;  }
+
+  void async(bool a) { async_ = a; }
 
   // Return a success status.
   static Status OK() { return Status(); }
@@ -184,6 +190,13 @@ class Status {
     return Status(kCompactionTooLarge, msg, msg2);
   }
 
+  static Status IOPending(SubCode msg = kNone) {
+    return Status(kIOPending, msg);
+  }
+  static Status IOPending(const Slice& msg, const Slice& msg2 = Slice()) {
+    return Status(kIOPending, msg, msg2);
+  }
+
   static Status NoSpace() { return Status(kIOError, kNoSpace); }
   static Status NoSpace(const Slice& msg, const Slice& msg2 = Slice()) {
     return Status(kIOError, kNoSpace, msg, msg2);
@@ -251,6 +264,8 @@ class Status {
   // Returns true iff the status indicates the proposed compaction is too large
   bool IsCompactionTooLarge() const { return code() == kCompactionTooLarge; }
 
+  bool IsIOPending() const { return code() == kIOPending; }
+
   // Returns true iff the status indicates a NoSpace error
   // This is caused by an I/O error returning the specific "out of space"
   // error condition. Stricto sensu, an NoSpace error is an I/O error
@@ -281,9 +296,10 @@ class Status {
   SubCode subcode_;
   Severity sev_;
   const char* state_;
+  bool async_; // Status originates with async op
 
   explicit Status(Code _code, SubCode _subcode = kNone)
-      : code_(_code), subcode_(_subcode), sev_(kNoError), state_(nullptr) {}
+      : code_(_code), subcode_(_subcode), sev_(kNoError), state_(nullptr), async_(false) {}
 
   Status(Code _code, SubCode _subcode, const Slice& msg, const Slice& msg2);
   Status(Code _code, const Slice& msg, const Slice& msg2)
@@ -292,7 +308,7 @@ class Status {
   static const char* CopyState(const char* s);
 };
 
-inline Status::Status(const Status& s) : code_(s.code_), subcode_(s.subcode_), sev_(s.sev_) {
+inline Status::Status(const Status& s) : code_(s.code_), subcode_(s.subcode_), sev_(s.sev_), async_(s.async_) {
   state_ = (s.state_ == nullptr) ? nullptr : CopyState(s.state_);
 }
 inline Status::Status(const Status& s, Severity sev)
@@ -308,6 +324,7 @@ inline Status& Status::operator=(const Status& s) {
     sev_ = s.sev_;
     delete[] state_;
     state_ = (s.state_ == nullptr) ? nullptr : CopyState(s.state_);
+    async_ = s.async_;
   }
   return *this;
 }
@@ -335,6 +352,8 @@ inline Status& Status::operator=(Status&& s)
     delete[] state_;
     state_ = nullptr;
     std::swap(state_, s.state_);
+    std::swap(async_, s.async_);
+    s.async_ = false;
   }
   return *this;
 }

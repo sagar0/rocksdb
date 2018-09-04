@@ -46,7 +46,7 @@ static const char* msgs[static_cast<int>(Status::kMaxSubCode)] = {
 
 Status::Status(Code _code, SubCode _subcode, const Slice& msg,
                const Slice& msg2)
-    : code_(_code), subcode_(_subcode), sev_(kNoError) {
+    : code_(_code), subcode_(_subcode), sev_(kNoError), async_(false) {
   assert(code_ != kOk);
   assert(subcode_ != kMaxSubCode);
   const size_t len1 = msg.size();
@@ -107,6 +107,9 @@ std::string Status::ToString() const {
       break;
     case kTryAgain:
       type = "Operation failed. Try again.: ";
+      break;
+    case kIOPending:
+      type = "Asynchronous IO pending: ";
       break;
     default:
       snprintf(tmp, sizeof(tmp), "Unknown code(%d): ",
