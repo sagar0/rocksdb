@@ -41,13 +41,9 @@ class AsyncStatusCapture {
   AsyncStatusCapture(AsyncStatusCapture&&) = default;
   AsyncStatusCapture& operator=(AsyncStatusCapture&&) = default;
 
-  bool async() const {
-    return async_;
-  }
+  bool async() const { return async_; }
 
-  void async(bool a) {
-    async_ = a;
-  }
+  void async(bool a) { async_ = a; }
 
   void async(const Status& s) {
     if (s.async()) {
@@ -55,13 +51,11 @@ class AsyncStatusCapture {
     }
   }
 
-  void reset_async(const Status& s) {
-    async_ = s.async();
-  }
+  void reset_async(const Status& s) { async_ = s.async(); }
 
-private:
+ private:
   bool async_;
 };
 
-} // async
-} // rocksdb
+}  // namespace async
+}  // namespace rocksdb

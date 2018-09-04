@@ -29,6 +29,7 @@
 
 #include "db/builder.h"
 #include "db/compaction_job.h"
+#include "db/db_impl_request.h"
 #include "db/db_info_dumper.h"
 #include "db/db_iter.h"
 #include "db/dbformat.h"
@@ -1058,10 +1059,11 @@ ColumnFamilyHandle* DBImpl::DefaultColumnFamily() const {
 }
 
 // Async version of the entry point
-Status DBImpl::Get(const GetCallback& /*cb*/, const ReadOptions& /*read_options*/,
-                  ColumnFamilyHandle* /*column_family*/, const Slice& /*key*/,
-                  std::string* /*value*/) {
-  return Status::NotSupported();
+Status DBImpl::Get(const GetCallback& cb, const ReadOptions& read_options,
+                   ColumnFamilyHandle* column_family, const Slice& key,
+                   std::string* value) {
+  return async::DBImplGetContext::RequestGet(
+      cb, this, read_options, column_family, key, nullptr, value);
 }
 
 Status DBImpl::Get(const ReadOptions& read_options,

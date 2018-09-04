@@ -71,6 +71,10 @@ struct JobContext;
 struct ExternalSstFileInfo;
 struct MemTableInfo;
 
+namespace async {
+class DBImplGetContext;
+}
+
 class DBImpl : public DB {
  public:
   DBImpl(const DBOptions& options, const std::string& dbname,
@@ -822,6 +826,9 @@ class DBImpl : public DB {
   friend class DBBlobIndexTest;
   friend class WriteUnpreparedTransactionTest_RecoveryTest_Test;
 #endif
+
+  friend class async::DBImplGetContext;
+
   struct CompactionState;
 
   struct WriteContext {
