@@ -168,6 +168,65 @@ TEST_F(DBBasicTest, CompactedDB) {
             "Not implemented: Not supported operation in read only mode.");
 }
 
+TEST_F(DBBasicTest, CompactedDBAsync) {
+  const uint64_t kFileSize = 1 << 20;
+  Options options = CurrentOptions();
+  options.disable_auto_compactions = true;
+  options.write_buffer_size = kFileSize;
+  options.target_file_size_base = kFileSize;
+  options.max_bytes_for_level_base = 1 << 30;
+  options.compression = kNoCompression;
+
+  Reopen(options);
+  // 1 L0 file, use CompactedDB if max_open_files = -1
+  ASSERT_OK(Put("aaa", DummyString(kFileSize / 2, '1')));
+  Flush();
+  Close();
+
+  options.max_open_files = -1;
+
+  Reopen(options);
+  // Add more L0 files
+  ASSERT_OK(Put("bbb", DummyString(kFileSize / 2, '2')));
+  Flush();
+  ASSERT_OK(Put("aaa", DummyString(kFileSize / 2, 'a')));
+  Flush();
+  ASSERT_OK(Put("bbb", DummyString(kFileSize / 2, 'b')));
+  ASSERT_OK(Put("eee", DummyString(kFileSize / 2, 'e')));
+  Flush();
+  Close();
+
+  // Full compaction
+  Reopen(options);
+  // Add more keys
+  ASSERT_OK(Put("fff", DummyString(kFileSize / 2, 'f')));
+  ASSERT_OK(Put("hhh", DummyString(kFileSize / 2, 'h')));
+  ASSERT_OK(Put("iii", DummyString(kFileSize / 2, 'i')));
+  ASSERT_OK(Put("jjj", DummyString(kFileSize / 2, 'j')));
+  db_->CompactRange(CompactRangeOptions(), nullptr, nullptr);
+  ASSERT_EQ(3, NumTableFilesAtLevel(1));
+  Close();
+
+  // CompactedDB
+  ASSERT_OK(ReadOnlyReopen(options));
+  ASSERT_EQ("NOT_FOUND", GetAsync("abc"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'a'), GetAsync("aaa"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'b'), GetAsync("bbb"));
+  ASSERT_EQ("NOT_FOUND", GetAsync("ccc"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'e'), GetAsync("eee"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'f'), GetAsync("fff"));
+  ASSERT_EQ("NOT_FOUND", GetAsync("ggg"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'h'), GetAsync("hhh"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'i'), GetAsync("iii"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'j'), GetAsync("jjj"));
+  ASSERT_EQ("NOT_FOUND", GetAsync("kkk"));
+
+  Reopen(options);
+  // Add a key
+  ASSERT_OK(Put("fff", DummyString(kFileSize / 2, 'f')));
+  Close();
+}
+
 TEST_F(DBBasicTest, LevelLimitReopen) {
   Options options = CurrentOptions();
   CreateAndReopenWithCF({"pikachu"}, options);

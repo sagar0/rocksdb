@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "async/async_absorber.h"
 #include "db/db_impl.h"
 #include "db/dbformat.h"
 #include "env/mock_env.h"
@@ -116,6 +117,26 @@ struct OptionsOverride {
   int skip_policy = 0;
 };
 
+class GetSyncer : public async::AsyncAbsorber {
+ public:
+  GetSyncer() {}
+
+  async::Callable<Status, const Status&> GetCallable() {
+    async::CallableFactory<GetSyncer, Status, const Status&> f(this);
+    return f.GetCallable<&GetSyncer::OnGetComplete>();
+  }
+
+  const Status& GetStatus() const { return s_; }
+
+ private:
+  Status OnGetComplete(const Status& status) {
+    s_ = status;
+    Notify();
+    return status;
+  }
+
+  Status s_;
+};
 }  // namespace anon
 
 enum SkipPolicy { kSkipNone = 0, kSkipNoSnapshot = 1, kSkipNoPrefix = 2 };
@@ -852,6 +873,12 @@ class DBTestBase : public testing::Test {
                   const Snapshot* snapshot = nullptr);
 
   Status Get(const std::string& k, PinnableSlice* v);
+
+  std::string GetAsync(const std::string& k,
+                       const Snapshot* snapshot = nullptr);
+
+  std::string GetAsync(int cf, const std::string& k,
+                       const Snapshot* snapshot = nullptr);
 
   uint64_t GetNumSnapshots();
 

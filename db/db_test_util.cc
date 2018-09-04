@@ -8,6 +8,8 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "db/db_test_util.h"
+
+#include "db/db_impl_request.h"
 #include "db/forward_iterator.h"
 #include "rocksdb/env_encryption.h"
 
@@ -725,6 +727,49 @@ Status DBTestBase::Get(const std::string& k, PinnableSlice* v) {
   options.verify_checksums = true;
   Status s = dbfull()->Get(options, dbfull()->DefaultColumnFamily(), k, v);
   return s;
+}
+
+std::string DBTestBase::GetAsync(const std::string& k,
+                                 const Snapshot* snapshot) {
+  ReadOptions options;
+  options.verify_checksums = true;
+  options.snapshot = snapshot;
+  auto cf = db_->DefaultColumnFamily();
+  std::string result;
+  anon::GetSyncer syncer;
+  Status s = async::DBImplGetContext::RequestGet(
+      syncer.GetCallable(), db_, options, cf, k, nullptr, &result);
+  if (s.IsIOPending()) {
+    syncer.Wait();
+    s = syncer.GetStatus();
+  }
+  if (s.IsNotFound()) {
+    result = "NOT_FOUND";
+  } else if (!s.ok()) {
+    result = s.ToString();
+  }
+  return result;
+}
+
+std::string DBTestBase::GetAsync(int cf, const std::string& k,
+                                 const Snapshot* snapshot) {
+  ReadOptions options;
+  options.verify_checksums = true;
+  options.snapshot = snapshot;
+  std::string result;
+  anon::GetSyncer syncer;
+  Status s = async::DBImplGetContext::RequestGet(
+      syncer.GetCallable(), db_, options, handles_[cf], k, nullptr, &result);
+  if (s.IsIOPending()) {
+    syncer.Wait();
+    s = syncer.GetStatus();
+  }
+  if (s.IsNotFound()) {
+    result = "NOT_FOUND";
+  } else if (!s.ok()) {
+    result = s.ToString();
+  }
+  return result;
 }
 
 uint64_t DBTestBase::GetNumSnapshots() {
