@@ -1057,6 +1057,13 @@ ColumnFamilyHandle* DBImpl::DefaultColumnFamily() const {
   return default_cf_handle_;
 }
 
+// Async version of the entry point
+Status DBImpl::Get(const GetCallback& /*cb*/, const ReadOptions& /*read_options*/,
+                  ColumnFamilyHandle* /*column_family*/, const Slice& /*key*/,
+                  std::string* /*value*/) {
+  return Status::NotSupported();
+}
+
 Status DBImpl::Get(const ReadOptions& read_options,
                    ColumnFamilyHandle* column_family, const Slice& key,
                    PinnableSlice* value) {

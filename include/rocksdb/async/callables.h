@@ -125,5 +125,6 @@ public:
 private:
   ObjectType* obj_;
 };
+
 } // async
 } // rocksdb

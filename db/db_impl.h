@@ -106,6 +106,10 @@ class DBImpl : public DB {
                      ColumnFamilyHandle* column_family, const Slice& key,
                      PinnableSlice* value) override;
 
+  virtual Status Get(const GetCallback& cb, const ReadOptions& options,
+      ColumnFamilyHandle* column_family, const Slice& key,
+      std::string* value) override;
+
   // Function that Get and KeyMayExist call with no_io true or false
   // Note: 'value_found' from KeyMayExist propagates here
   Status GetImpl(const ReadOptions& options, ColumnFamilyHandle* column_family,
