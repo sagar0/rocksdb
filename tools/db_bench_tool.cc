@@ -193,6 +193,18 @@ DEFINE_string(
     "\theapprofile -- Dump a heap profile (if supported by this port)\n"
     "\treplay      -- replay the trace file specified with trace_file\n");
 
+DEFINE_int64(
+    active_width, 0,
+    "Number of keys in active span of the key-range at any given time. The "
+    "span begins with its left endpoint at key 0, gradually moves rightwards, "
+    "and ends with its right endpoint at max_key. If set to 0, active_width "
+    "will be sanitized to be equal to max_key.");
+
+DEFINE_int64(move_after, 0, "move after");
+
+DEFINE_int64(move_by, 0, "move by");
+
+
 DEFINE_int64(num, 1000000, "Number of key/values to place in database");
 
 DEFINE_int64(numdistinct, 1000,
@@ -3731,8 +3743,12 @@ void VerifyDBFromDB(std::string& truth_db_name) {
   class KeyGenerator {
    public:
     KeyGenerator(Random64* rand, WriteMode mode, uint64_t num,
-                 uint64_t /*num_per_set*/ = 64 * 1024)
-        : rand_(rand), mode_(mode), num_(num), next_(0) {
+                 uint64_t /*num_per_set*/ = 64 * 1024,
+                 uint64_t active_width = 0, uint64_t move_after = 0,
+                 uint64_t move_by = 0)
+        : rand_(rand), mode_(mode), num_(num), next_(0),
+          active_width_(active_width), move_after_(move_after),
+          move_by_(move_by), ops_after_last_reset_(0), base_num_(0) {
       if (mode_ == UNIQUE_RANDOM) {
         // NOTE: if memory consumption of this approach becomes a concern,
         // we can either break it into pieces and only random shuffle a section
@@ -3753,6 +3769,20 @@ void VerifyDBFromDB(std::string& truth_db_name) {
         case SEQUENTIAL:
           return next_++;
         case RANDOM:
+          if (active_width_ > 0) {
+            uint64_t rand_num = base_num_ + (rand_->Next() % active_width_);
+            ops_after_last_reset_++;
+            if (ops_after_last_reset_ > move_after_) {
+              ops_after_last_reset_ = 0;
+              base_num_ += move_by_;
+              if (base_num_ + active_width_ > num_) {
+                base_num_ = 0;
+              }
+            }
+            fprintf(stderr, "rand: %" PRIu64 "\n", rand_num);
+            return rand_num;
+          }
+          fprintf(stderr, "rand: \n");
           return rand_->Next() % num_;
         case UNIQUE_RANDOM:
           assert(next_ < num_);
@@ -3768,6 +3798,11 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     const uint64_t num_;
     uint64_t next_;
     std::vector<uint64_t> values_;
+    uint64_t active_width_;
+    uint64_t move_after_;
+    uint64_t move_by_;
+    uint64_t ops_after_last_reset_;
+    uint64_t base_num_;
   };
 
   DB* SelectDB(ThreadState* thread) {
@@ -3811,7 +3846,8 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     for (size_t i = 0; i < num_key_gens; i++) {
       key_gens[i].reset(new KeyGenerator(&(thread->rand), write_mode,
                                          num_ + max_num_range_tombstones_,
-                                         ops_per_stage));
+                                         ops_per_stage, FLAGS_active_width,
+                                         FLAGS_move_after, FLAGS_move_by));
     }
 
     if (num_ != FLAGS_num) {
@@ -4938,6 +4974,7 @@ void VerifyDBFromDB(std::string& truth_db_name) {
         delete_weight = FLAGS_deletepercent;
         put_weight = 100 - get_weight - delete_weight;
       }
+
       GenerateKeyFromInt(thread->rand.Next() % FLAGS_numdistinct,
           FLAGS_numdistinct, &key);
       if (get_weight > 0) {
@@ -4983,6 +5020,27 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     thread->stats.AddMessage(msg);
   }
 
+
+  uint64_t SanitizeRandom(uint64_t rand_num, uint64_t *base_num,
+      uint64_t *ops_after_last_reset) {
+    if (FLAGS_active_width > 0) {
+      rand_num = *base_num + (rand_num % FLAGS_active_width);
+      *ops_after_last_reset = *ops_after_last_reset + 1;
+      if (*ops_after_last_reset > static_cast<uint64_t>(FLAGS_move_after)) {
+        *ops_after_last_reset = 0;
+        *base_num += FLAGS_move_by;
+        if (*base_num + static_cast<uint64_t>(FLAGS_active_width) >
+            static_cast<uint64_t>(FLAGS_num)) {
+          *base_num = 0;
+        }
+      }
+    }
+    rand_num = rand_num % FLAGS_num;
+    fprintf(stderr, "rand: %" PRIu64 "\n", rand_num);
+    return rand_num;
+  }
+
+
   // This is different from ReadWhileWriting because it does not use
   // an extra thread.
   void ReadRandomWriteRandom(ThreadState* thread) {
@@ -4996,13 +5054,17 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     int64_t writes_done = 0;
     Duration duration(FLAGS_duration, readwrites_);
 
+    uint64_t base_num = 0;
+    uint64_t ops_after_last_reset = 0;
+
     std::unique_ptr<const char[]> key_guard;
     Slice key = AllocateKey(&key_guard);
 
     // the number of iterations is the larger of read_ or write_
     while (!duration.Done(1)) {
       DB* db = SelectDB(thread);
-      GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
+      GenerateKeyFromInt(SanitizeRandom(thread->rand.Next(), &base_num, &ops_after_last_reset),
+          FLAGS_num, &key);
       if (get_weight == 0 && put_weight == 0) {
         // one batch completed, reinitialize for next batch
         get_weight = FLAGS_readwritepercent;
