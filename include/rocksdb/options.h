@@ -1087,6 +1087,8 @@ struct DBOptions {
   // If set to true, takes precedence over
   // ReadOptions::background_purge_on_iterator_cleanup.
   bool avoid_unnecessary_blocking_io = false;
+
+  bool db_encrypted = false;
 };
 
 // Options to control the behavior of a database (passed to DB::Open)

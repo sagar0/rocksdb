@@ -32,6 +32,11 @@ Options SanitizeOptions(const std::string& dbname, const Options& src) {
 DBOptions SanitizeOptions(const std::string& dbname, const DBOptions& src) {
   DBOptions result(src);
 
+  // if (result.db_encrypted) {
+  //   result.env = NewEncryptedEnv(result.env,
+  //       new CTREncryptionProvider(rot13Cipher));
+  // }
+
   // result.max_open_files means an "infinite" open files.
   if (result.max_open_files != -1) {
     int max_max_open_files = port::GetMaxOpenFiles();
@@ -1115,6 +1120,7 @@ Status DBImpl::WriteLevel0TableForRecovery(int job_id, ColumnFamilyData* cfd,
       if (range_del_iter != nullptr) {
         range_del_iters.emplace_back(range_del_iter);
       }
+      // Env* table_env = cfd->ioptions()->db_encrypted ? encrypted_env_ : env_;
       s = BuildTable(
           dbname_, env_, *cfd->ioptions(), mutable_cf_options,
           env_options_for_compaction_, cfd->table_cache(), iter.get(),

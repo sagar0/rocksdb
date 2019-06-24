@@ -83,7 +83,7 @@ const char* GetFlushReasonString (FlushReason flush_reason) {
 }
 
 FlushJob::FlushJob(const std::string& dbname, ColumnFamilyData* cfd,
-                   const ImmutableDBOptions& db_options,
+                   Env* env, const ImmutableDBOptions& db_options,
                    const MutableCFOptions& mutable_cf_options,
                    const uint64_t* max_memtable_id,
                    const EnvOptions& env_options, VersionSet* versions,
@@ -100,6 +100,7 @@ FlushJob::FlushJob(const std::string& dbname, ColumnFamilyData* cfd,
                    Env::Priority thread_pri)
     : dbname_(dbname),
       cfd_(cfd),
+      env_(env),
       db_options_(db_options),
       mutable_cf_options_(mutable_cf_options),
       max_memtable_id_(max_memtable_id),
@@ -366,7 +367,7 @@ Status FlushJob::WriteLevel0Table() {
           mems_.front()->ApproximateOldestKeyTime();
 
       s = BuildTable(
-          dbname_, db_options_.env, *cfd_->ioptions(), mutable_cf_options_,
+          dbname_, env_, *cfd_->ioptions(), mutable_cf_options_,
           env_options_, cfd_->table_cache(), iter.get(),
           std::move(range_del_iters), &meta_, cfd_->internal_comparator(),
           cfd_->int_tbl_prop_collector_factories(), cfd_->GetID(),

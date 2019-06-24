@@ -187,6 +187,13 @@ Status CheckCFPathsSupported(const DBOptions& db_options,
   return Status::OK();
 }
 
+Status CheckEncryptionSupport(const DBOptions& /*db_options*/,
+                             const ColumnFamilyOptions& /*cf_options*/) {
+  // Temporary place holder.
+  // TODO (sagar0): Add the right checks.
+  return Status::OK();
+}
+
 ColumnFamilyOptions SanitizeOptions(const ImmutableDBOptions& db_options,
                                     const ColumnFamilyOptions& src) {
   ColumnFamilyOptions result = src;
@@ -402,7 +409,7 @@ void SuperVersionUnrefHandle(void* ptr) {
 }  // anonymous namespace
 
 ColumnFamilyData::ColumnFamilyData(
-    uint32_t id, const std::string& name, Version* _dummy_versions,
+    uint32_t id, const std::string& name, Env* env, Version* _dummy_versions,
     Cache* _table_cache, WriteBufferManager* write_buffer_manager,
     const ColumnFamilyOptions& cf_options, const ImmutableDBOptions& db_options,
     const EnvOptions& env_options, ColumnFamilySet* column_family_set,
@@ -446,7 +453,7 @@ ColumnFamilyData::ColumnFamilyData(
   if (_dummy_versions != nullptr) {
     internal_stats_.reset(
         new InternalStats(ioptions_.num_levels, db_options.env, this));
-    table_cache_.reset(new TableCache(ioptions_, env_options, _table_cache,
+    table_cache_.reset(new TableCache(env, ioptions_, env_options, _table_cache,
                                       block_cache_tracer));
     if (ioptions_.compaction_style == kCompactionStyleLevel) {
       compaction_picker_.reset(
@@ -1184,6 +1191,8 @@ Status ColumnFamilyData::ValidateOptions(
           "Block-Based Table format. ");
     }
   }
+
+  s = CheckEncryptionSupport(db_options, cf_options);
   return s;
 }
 
@@ -1251,7 +1260,7 @@ Directory* ColumnFamilyData::GetDataDir(size_t path_id) const {
   return data_dirs_[path_id].get();
 }
 
-ColumnFamilySet::ColumnFamilySet(const std::string& dbname,
+ColumnFamilySet::ColumnFamilySet(const std::string& dbname, Env* env,
                                  const ImmutableDBOptions* db_options,
                                  const EnvOptions& env_options,
                                  Cache* table_cache,
@@ -1260,11 +1269,12 @@ ColumnFamilySet::ColumnFamilySet(const std::string& dbname,
                                  BlockCacheTracer* const block_cache_tracer)
     : max_column_family_(0),
       dummy_cfd_(new ColumnFamilyData(
-          0, "", nullptr, nullptr, nullptr, ColumnFamilyOptions(), *db_options,
+          0, "", env, nullptr, nullptr, nullptr, ColumnFamilyOptions(), *db_options,
           env_options, nullptr, block_cache_tracer)),
       default_cfd_cache_(nullptr),
       db_name_(dbname),
       db_options_(db_options),
+      env_(env),
       env_options_(env_options),
       table_cache_(table_cache),
       write_buffer_manager_(write_buffer_manager),
@@ -1336,7 +1346,7 @@ ColumnFamilyData* ColumnFamilySet::CreateColumnFamily(
     const ColumnFamilyOptions& options) {
   assert(column_families_.find(name) == column_families_.end());
   ColumnFamilyData* new_cfd = new ColumnFamilyData(
-      id, name, dummy_versions, table_cache_, write_buffer_manager_, options,
+      id, name, env_, dummy_versions, table_cache_, write_buffer_manager_, options,
       *db_options_, env_options_, this, block_cache_tracer_);
   column_families_.insert({name, id});
   column_family_data_.insert({id, new_cfd});

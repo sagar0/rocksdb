@@ -46,6 +46,7 @@
 #include "port/port.h"
 #include "rocksdb/db.h"
 #include "rocksdb/env.h"
+#include "rocksdb/env_encryption.h"
 #include "rocksdb/memtablerep.h"
 #include "rocksdb/status.h"
 #include "rocksdb/trace_reader_writer.h"
@@ -831,6 +832,7 @@ class DBImpl : public DB {
 
  protected:
   Env* const env_;
+  Env* const encrypted_env_;
   const std::string dbname_;
   std::unique_ptr<VersionSet> versions_;
   // Flag to check whether we allocated and own the info log file

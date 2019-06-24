@@ -48,7 +48,7 @@ class WalManagerTest : public testing::Test {
     db_options_.wal_dir = dbname_;
     db_options_.env = env_.get();
 
-    versions_.reset(new VersionSet(dbname_, &db_options_, env_options_,
+    versions_.reset(new VersionSet(dbname_, env_.get(), &db_options_, env_options_,
                                    table_cache_.get(), &write_buffer_manager_,
                                    &write_controller_,
                                    /*block_cache_tracer=*/nullptr));
@@ -293,7 +293,7 @@ TEST_F(WalManagerTest, TransactionLogIteratorJustEmptyFile) {
   // Check that an empty iterator is returned
   ASSERT_TRUE(!iter->Valid());
 }
-  
+
 TEST_F(WalManagerTest, TransactionLogIteratorNewFileWhileScanning) {
   Init();
   CreateArchiveLogs(2, 100);
@@ -307,7 +307,7 @@ TEST_F(WalManagerTest, TransactionLogIteratorNewFileWhileScanning) {
   // A new log file was added after the iterator was created.
   // TryAgain indicates a new iterator is needed to fetch the new data
   ASSERT_TRUE(iter->status().IsTryAgain());
-  
+
   iter = OpenTransactionLogIter(0);
   i = 0;
   for (; iter->Valid(); iter->Next()) {

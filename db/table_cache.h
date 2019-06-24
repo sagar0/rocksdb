@@ -48,7 +48,7 @@ class HistogramImpl;
 // ioptions.row_cache
 class TableCache {
  public:
-  TableCache(const ImmutableCFOptions& ioptions,
+  TableCache(Env* env, const ImmutableCFOptions& ioptions,
              const EnvOptions& storage_options, Cache* cache,
              BlockCacheTracer* const block_cache_tracer);
   ~TableCache();
@@ -184,6 +184,7 @@ class TableCache {
                         bool prefetch_index_and_filter_in_cache = true,
                         bool for_compaction = false);
 
+  Env* env_;
   const ImmutableCFOptions& ioptions_;
   const EnvOptions& env_options_;
   Cache* const cache_;

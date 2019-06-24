@@ -745,7 +745,7 @@ Status BlockAccessCipherStream::Decrypt(uint64_t fileOffset, char *data, size_t 
   std::string scratch;
   AllocateScratch(scratch);
 
-  assert(fileOffset < dataSize);
+//  assert(fileOffset < dataSize);
 
   // Decrypt individual blocks.
   while (1) {

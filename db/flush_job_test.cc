@@ -33,7 +33,7 @@ class FlushJobTest : public testing::Test {
         column_family_names_({kDefaultColumnFamilyName, "foo", "bar"}),
         table_cache_(NewLRUCache(50000, 16)),
         write_buffer_manager_(db_options_.db_write_buffer_size),
-        versions_(new VersionSet(dbname_, &db_options_, env_options_,
+        versions_(new VersionSet(dbname_, env_, &db_options_, env_options_,
                                  table_cache_.get(), &write_buffer_manager_,
                                  &write_controller_,
                                  /*block_cache_tracer=*/nullptr)),
@@ -120,7 +120,7 @@ TEST_F(FlushJobTest, Empty) {
   EventLogger event_logger(db_options_.info_log.get());
   SnapshotChecker* snapshot_checker = nullptr;  // not relavant
   FlushJob flush_job(dbname_, versions_->GetColumnFamilySet()->GetDefault(),
-                     db_options_, *cfd->GetLatestMutableCFOptions(),
+                     env_, db_options_, *cfd->GetLatestMutableCFOptions(),
                      nullptr /* memtable_id */, env_options_, versions_.get(),
                      &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
                      snapshot_checker, &job_context, nullptr, nullptr, nullptr,
@@ -168,7 +168,7 @@ TEST_F(FlushJobTest, NonEmpty) {
   EventLogger event_logger(db_options_.info_log.get());
   SnapshotChecker* snapshot_checker = nullptr;  // not relavant
   FlushJob flush_job(dbname_, versions_->GetColumnFamilySet()->GetDefault(),
-                     db_options_, *cfd->GetLatestMutableCFOptions(),
+                     env_, db_options_, *cfd->GetLatestMutableCFOptions(),
                      nullptr /* memtable_id */, env_options_, versions_.get(),
                      &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
                      snapshot_checker, &job_context, nullptr, nullptr, nullptr,
@@ -232,7 +232,7 @@ TEST_F(FlushJobTest, FlushMemTablesSingleColumnFamily) {
   uint64_t flush_memtable_id = smallest_memtable_id + num_mems_to_flush - 1;
 
   FlushJob flush_job(dbname_, versions_->GetColumnFamilySet()->GetDefault(),
-                     db_options_, *cfd->GetLatestMutableCFOptions(),
+                     env_, db_options_, *cfd->GetLatestMutableCFOptions(),
                      &flush_memtable_id, env_options_, versions_.get(), &mutex_,
                      &shutting_down_, {}, kMaxSequenceNumber, snapshot_checker,
                      &job_context, nullptr, nullptr, nullptr, kNoCompression,
@@ -303,7 +303,7 @@ TEST_F(FlushJobTest, FlushMemtablesMultipleColumnFamilies) {
   for (auto cfd : all_cfds) {
     std::vector<SequenceNumber> snapshot_seqs;
     flush_jobs.emplace_back(
-        dbname_, cfd, db_options_, *cfd->GetLatestMutableCFOptions(),
+        dbname_, cfd, env_, db_options_, *cfd->GetLatestMutableCFOptions(),
         &memtable_ids[k], env_options_, versions_.get(), &mutex_,
         &shutting_down_, snapshot_seqs, kMaxSequenceNumber, snapshot_checker,
         &job_context, nullptr, nullptr, nullptr, kNoCompression,
@@ -419,7 +419,7 @@ TEST_F(FlushJobTest, Snapshots) {
   EventLogger event_logger(db_options_.info_log.get());
   SnapshotChecker* snapshot_checker = nullptr;  // not relavant
   FlushJob flush_job(dbname_, versions_->GetColumnFamilySet()->GetDefault(),
-                     db_options_, *cfd->GetLatestMutableCFOptions(),
+                     env_, db_options_, *cfd->GetLatestMutableCFOptions(),
                      nullptr /* memtable_id */, env_options_, versions_.get(),
                      &mutex_, &shutting_down_, snapshots, kMaxSequenceNumber,
                      snapshot_checker, &job_context, nullptr, nullptr, nullptr,

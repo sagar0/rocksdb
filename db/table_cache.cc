@@ -61,10 +61,11 @@ void AppendVarint64(IterKey* key, uint64_t v) {
 
 }  // namespace
 
-TableCache::TableCache(const ImmutableCFOptions& ioptions,
+TableCache::TableCache(Env* env, const ImmutableCFOptions& ioptions,
                        const EnvOptions& env_options, Cache* const cache,
                        BlockCacheTracer* const block_cache_tracer)
-    : ioptions_(ioptions),
+    : env_(env),
+      ioptions_(ioptions),
       env_options_(env_options),
       cache_(cache),
       immortal_tables_(false),
@@ -97,7 +98,7 @@ Status TableCache::GetTableReader(
   std::string fname =
       TableFileName(ioptions_.cf_paths, fd.GetNumber(), fd.GetPathId());
   std::unique_ptr<RandomAccessFile> file;
-  Status s = ioptions_.env->NewRandomAccessFile(fname, &file, env_options);
+  Status s = env_->NewRandomAccessFile(fname, &file, env_options);
 
   RecordTick(ioptions_.statistics, NO_FILE_OPENS);
   if (s.ok()) {
@@ -107,7 +108,7 @@ Status TableCache::GetTableReader(
     StopWatch sw(ioptions_.env, ioptions_.statistics, TABLE_OPEN_IO_MICROS);
     std::unique_ptr<RandomAccessFileReader> file_reader(
         new RandomAccessFileReader(
-            std::move(file), fname, ioptions_.env,
+            std::move(file), fname, env_,
             record_read_stats ? ioptions_.statistics : nullptr, SST_READ_MICROS,
             file_read_hist, ioptions_.rate_limiter, for_compaction,
             ioptions_.listeners));

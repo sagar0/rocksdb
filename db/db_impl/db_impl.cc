@@ -142,14 +142,20 @@ void DumpSupportInfo(Logger* logger) {
 int64_t kDefaultLowPriThrottledRate = 2 * 1024 * 1024;
 }  // namespace
 
+ROT13BlockCipher rot13Cipher(16);
+
 DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
                const bool seq_per_batch, const bool batch_per_txn)
     : env_(options.env),
+      encrypted_env_(options.db_encrypted ?
+        NewEncryptedEnv(env_, new CTREncryptionProvider(rot13Cipher)) :
+        nullptr),
       dbname_(dbname),
       own_info_log_(options.info_log == nullptr),
       initial_db_options_(SanitizeOptions(dbname, options)),
       immutable_db_options_(initial_db_options_),
       mutable_db_options_(initial_db_options_),
+      // env_(immutable_db_options_.env),
       stats_(immutable_db_options_.statistics.get()),
       mutex_(stats_, env_, DB_MUTEX_WAIT_MICROS,
              immutable_db_options_.use_adaptive_mutex),
@@ -240,7 +246,9 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
   table_cache_ = NewLRUCache(table_cache_size,
                              immutable_db_options_.table_cache_numshardbits);
 
-  versions_.reset(new VersionSet(dbname_, &immutable_db_options_, env_options_,
+  versions_.reset(new VersionSet(dbname_,
+                                 immutable_db_options_.db_encrypted ? encrypted_env_ : env_,
+                                 &immutable_db_options_, env_options_,
                                  table_cache_.get(), write_buffer_manager_,
                                  &write_controller_, &block_cache_tracer_));
   column_family_memtables_.reset(

@@ -85,7 +85,8 @@ ImmutableDBOptions::ImmutableDBOptions(const DBOptions& options)
       manual_wal_flush(options.manual_wal_flush),
       atomic_flush(options.atomic_flush),
       avoid_unnecessary_blocking_io(options.avoid_unnecessary_blocking_io),
-      persist_stats_to_disk(options.persist_stats_to_disk) {
+      persist_stats_to_disk(options.persist_stats_to_disk),
+      db_encrypted(options.db_encrypted) {
 }
 
 void ImmutableDBOptions::Dump(Logger* log) const {
@@ -225,6 +226,8 @@ void ImmutableDBOptions::Dump(Logger* log) const {
                    avoid_unnecessary_blocking_io);
   ROCKS_LOG_HEADER(log, "                Options.persist_stats_to_disk: %u",
                    persist_stats_to_disk);
+  ROCKS_LOG_HEADER(log, "                         Options.db_encrypted: %d",
+                   db_encrypted);
 }
 
 MutableDBOptions::MutableDBOptions()

@@ -57,7 +57,7 @@ class FlushJob {
   // TODO(icanadi) make effort to reduce number of parameters here
   // IMPORTANT: mutable_cf_options needs to be alive while FlushJob is alive
   FlushJob(const std::string& dbname, ColumnFamilyData* cfd,
-           const ImmutableDBOptions& db_options,
+           Env* env, const ImmutableDBOptions& db_options,
            const MutableCFOptions& mutable_cf_options,
            const uint64_t* max_memtable_id, const EnvOptions& env_options,
            VersionSet* versions, InstrumentedMutex* db_mutex,
@@ -90,6 +90,7 @@ class FlushJob {
 
   const std::string& dbname_;
   ColumnFamilyData* cfd_;
+  Env* env_;
   const ImmutableDBOptions& db_options_;
   const MutableCFOptions& mutable_cf_options_;
   // Pointer to a variable storing the largest memtable id to flush in this

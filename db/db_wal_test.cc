@@ -836,7 +836,7 @@ class RecoveryTestHelper {
     std::unique_ptr<WalManager> wal_manager;
     WriteController write_controller;
 
-    versions.reset(new VersionSet(test->dbname_, &db_options, env_options,
+    versions.reset(new VersionSet(test->dbname_, test->env_, &db_options, env_options,
                                   table_cache.get(), &write_buffer_manager,
                                   &write_controller,
                                   /*block_cache_tracer=*/nullptr));

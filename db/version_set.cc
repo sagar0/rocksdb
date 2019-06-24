@@ -3339,16 +3339,16 @@ void AtomicGroupReadBuffer::Clear() {
   replay_buffer_.clear();
 }
 
-VersionSet::VersionSet(const std::string& dbname,
+VersionSet::VersionSet(const std::string& dbname, Env* env,
                        const ImmutableDBOptions* _db_options,
                        const EnvOptions& storage_options, Cache* table_cache,
                        WriteBufferManager* write_buffer_manager,
                        WriteController* write_controller,
                        BlockCacheTracer* const block_cache_tracer)
     : column_family_set_(new ColumnFamilySet(
-          dbname, _db_options, storage_options, table_cache,
+          dbname, env, _db_options, storage_options, table_cache,
           write_buffer_manager, write_controller, block_cache_tracer)),
-      env_(_db_options->env),
+      env_(env),
       dbname_(dbname),
       db_options_(_db_options),
       next_file_number_(2),
@@ -4193,7 +4193,7 @@ Status VersionSet::Recover(
 
   // Read "CURRENT" file, which contains a pointer to the current manifest file
   std::string manifest_path;
-  Status s = GetCurrentManifestPath(dbname_, env_, &manifest_path,
+  Status s = GetCurrentManifestPath(dbname_, db_options_->env, &manifest_path,
                                     &manifest_file_number_);
   if (!s.ok()) {
     return s;
@@ -4205,8 +4205,8 @@ Status VersionSet::Recover(
   std::unique_ptr<SequentialFileReader> manifest_file_reader;
   {
     std::unique_ptr<SequentialFile> manifest_file;
-    s = env_->NewSequentialFile(manifest_path, &manifest_file,
-                                env_->OptimizeForManifestRead(env_options_));
+    s = db_options_->env->NewSequentialFile(manifest_path, &manifest_file,
+                                db_options_->env->OptimizeForManifestRead(env_options_));
     if (!s.ok()) {
       return s;
     }
@@ -4214,7 +4214,7 @@ Status VersionSet::Recover(
         new SequentialFileReader(std::move(manifest_file), manifest_path));
   }
   uint64_t current_manifest_file_size;
-  s = env_->GetFileSize(manifest_path, &current_manifest_file_size);
+  s = db_options_->env->GetFileSize(manifest_path, &current_manifest_file_size);
   if (!s.ok()) {
     return s;
   }
@@ -4460,7 +4460,7 @@ Status VersionSet::ReduceNumberOfLevels(const std::string& dbname,
                                         options->table_cache_numshardbits));
   WriteController wc(options->delayed_write_rate);
   WriteBufferManager wb(options->db_write_buffer_size);
-  VersionSet versions(dbname, &db_options, env_options, tc.get(), &wb, &wc,
+  VersionSet versions(dbname, db_options.env, &db_options, env_options, tc.get(), &wb, &wc,
                       /*block_cache_tracer=*/nullptr);
   Status status;
 
@@ -4538,7 +4538,7 @@ Status VersionSet::DumpManifest(Options& options, std::string& dscname,
   {
     std::unique_ptr<SequentialFile> file;
     s = options.env->NewSequentialFile(
-        dscname, &file, env_->OptimizeForManifestRead(env_options_));
+        dscname, &file, db_options_->env->OptimizeForManifestRead(env_options_));
     if (!s.ok()) {
       return s;
     }
@@ -5215,7 +5215,7 @@ ReactiveVersionSet::ReactiveVersionSet(const std::string& dbname,
                                        Cache* table_cache,
                                        WriteBufferManager* write_buffer_manager,
                                        WriteController* write_controller)
-    : VersionSet(dbname, _db_options, _env_options, table_cache,
+    : VersionSet(dbname, _db_options->env, _db_options, _env_options, table_cache,
                  write_buffer_manager, write_controller,
                  /*block_cache_tracer=*/nullptr),
       number_of_edits_to_skip_(0) {}

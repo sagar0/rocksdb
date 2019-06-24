@@ -249,6 +249,9 @@ extern Status CheckConcurrentWritesSupported(
 extern Status CheckCFPathsSupported(const DBOptions& db_options,
                                     const ColumnFamilyOptions& cf_options);
 
+extern Status CheckEncryptionSupport(const DBOptions& db_options,
+                                     const ColumnFamilyOptions& cf_options);
+
 extern ColumnFamilyOptions SanitizeOptions(const ImmutableDBOptions& db_options,
                                            const ColumnFamilyOptions& src);
 // Wrap user defined table proproties collector factories `from cf_options`
@@ -499,7 +502,7 @@ class ColumnFamilyData {
 
  private:
   friend class ColumnFamilySet;
-  ColumnFamilyData(uint32_t id, const std::string& name,
+  ColumnFamilyData(uint32_t id, const std::string& name, Env* env,
                    Version* dummy_versions, Cache* table_cache,
                    WriteBufferManager* write_buffer_manager,
                    const ColumnFamilyOptions& options,
@@ -630,7 +633,7 @@ class ColumnFamilySet {
     ColumnFamilyData* current_;
   };
 
-  ColumnFamilySet(const std::string& dbname,
+  ColumnFamilySet(const std::string& dbname, Env* env,
                   const ImmutableDBOptions* db_options,
                   const EnvOptions& env_options, Cache* table_cache,
                   WriteBufferManager* write_buffer_manager,
@@ -690,6 +693,7 @@ class ColumnFamilySet {
 
   const std::string db_name_;
   const ImmutableDBOptions* const db_options_;
+  Env* env_;
   const EnvOptions env_options_;
   Cache* table_cache_;
   WriteBufferManager* write_buffer_manager_;
