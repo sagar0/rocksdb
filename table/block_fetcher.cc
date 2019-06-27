@@ -142,6 +142,8 @@ inline void BlockFetcher::PrepareBufferForBlockFromFile() {
   } else {
     heap_buf_ =
         AllocateBlock(block_size_ + kBlockTrailerSize, memory_allocator_);
+    // enc_buf_ =
+    //     AllocateBlock(block_size_ + kBlockTrailerSize, memory_allocator_);
     used_buf_ = heap_buf_.get();
   }
 }
@@ -194,6 +196,19 @@ inline void BlockFetcher::GetBlockContents() {
 #ifndef NDEBUG
   contents_->is_raw_block = true;
 #endif
+}
+
+void BlockFetcher::DecryptBlock() {
+  //enc_buf_.reset(new char[slice_.size()]);
+  std::unique_ptr<char[]> enc_buf(new char[block_size_]);
+  fprintf(stderr, "Decrypting block--->\n");
+  for (size_t i = 0; i < block_size_; i++) {
+    enc_buf[i] = slice_[i];
+    fprintf(stderr, "[%d -> %d] ", slice_[i], (slice_[i] - 13));
+  }
+  fprintf(stderr, "<---\n\n");
+  memcpy(used_buf_, enc_buf.get(), block_size_);
+  slice_ = Slice(used_buf_, block_size_ + kBlockTrailerSize);
 }
 
 Status BlockFetcher::ReadBlockContents() {
@@ -255,6 +270,17 @@ Status BlockFetcher::ReadBlockContents() {
     }
 
     CheckBlockChecksum();
+
+
+    // Decryption
+    if (!status_.ok()) {
+      return status_;
+    }
+    if (ioptions_.encrypted && block_type_ == BlockType::kData) {
+      DecryptBlock();
+    }
+
+
     if (status_.ok()) {
       InsertCompressedBlockToPersistentCacheIfNeeded();
     } else {

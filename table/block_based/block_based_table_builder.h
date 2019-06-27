@@ -143,4 +143,5 @@ Slice CompressBlock(const Slice& raw, const CompressionInfo& info,
                     std::string* sampled_output_fast,
                     std::string* sampled_output_slow);
 
+Slice EncrypBlock(const Slice& raw);
 }  // namespace rocksdb

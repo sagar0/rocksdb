@@ -312,6 +312,7 @@ void RandomInitCFOptions(ColumnFamilyOptions* cf_opt, DBOptions& db_options,
   cf_opt->force_consistency_checks = rnd->Uniform(2);
   cf_opt->compaction_options_fifo.allow_compaction = rnd->Uniform(2);
   cf_opt->memtable_whole_key_filtering = rnd->Uniform(2);
+  cf_opt->encrypted = rnd->Uniform(2);
 
   // double options
   cf_opt->hard_rate_limit = static_cast<double>(rnd->Uniform(10000)) / 13;
