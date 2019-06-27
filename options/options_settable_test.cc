@@ -455,6 +455,7 @@ TEST_F(OptionsSettableTest, ColumnFamilyOptionsAllFieldsSettable) {
       "ttl=60;"
       "periodic_compaction_seconds=3600;"
       "sample_for_compression=0;"
+      "encrypted=0;"
       "compaction_options_fifo={max_table_files_size=3;allow_"
       "compaction=false;};",
       new_options));

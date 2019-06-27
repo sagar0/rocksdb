@@ -37,6 +37,22 @@ TEST_F(DBBasicTest, OpenWhenOpen) {
   delete db2;
 }
 
+TEST_F(DBBasicTest, EncryptedOpen) {
+  Options options = CurrentOptions();
+  options.encrypted = true;
+  DestroyAndReopen(options);
+
+  const std::string value(10, ' ');
+  ASSERT_OK(Put("foo", "v1"));
+  ASSERT_OK(Put("bar", "v2"));
+  ASSERT_OK(Put("baz", "v3"));
+  ASSERT_OK(Flush());
+
+  ASSERT_EQ("v1", Get("foo"));
+  ASSERT_EQ("v2", Get("bar"));
+  ASSERT_EQ("v3", Get("baz"));
+}
+
 #ifndef ROCKSDB_LITE
 TEST_F(DBBasicTest, ReadOnlyDB) {
   ASSERT_OK(Put("foo", "v1"));

@@ -205,6 +205,16 @@ Slice CompressBlock(const Slice& raw, const CompressionInfo& info,
   return raw;
 }
 
+bool EncryptBlock(const Slice& raw, std::string *enc_output) {
+  fprintf(stderr, "Encrypting block--->\n");
+  for (size_t i = 0; i < raw.size(); i++) {
+    enc_output->push_back(char(raw[i] + 13));
+    fprintf(stderr, "[%d -> %d] ", raw[i], raw[i]+13);
+  }
+  fprintf(stderr, "<---\n\n");
+  return true;
+}
+
 // kBlockBasedTableMagicNumber was picked by running
 //    echo rocksdb.table.block_based | sha1sum
 // and taking the leading 64 bits.
@@ -695,6 +705,13 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
     RecordTick(r->ioptions.statistics, NUMBER_BLOCK_COMPRESSED);
   } else if (type != r->compression_type) {
     RecordTick(r->ioptions.statistics, NUMBER_BLOCK_NOT_COMPRESSED);
+  }
+
+  Slice enc_block_contents;
+  std::string enc_output;
+  if (r->ioptions.encrypted && is_data_block) {
+    EncryptBlock(block_contents, &enc_output);
+    block_contents = Slice(enc_output);
   }
 
   WriteRawBlock(block_contents, type, handle, is_data_block);

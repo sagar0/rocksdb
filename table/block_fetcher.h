@@ -85,6 +85,7 @@ class BlockFetcher {
   Status status_;
   Slice slice_;
   char* used_buf_ = nullptr;
+  // char* enc_buf_ = nullptr;
   size_t block_size_;
   CacheAllocationPtr heap_buf_;
   CacheAllocationPtr compressed_buf_;
@@ -92,6 +93,7 @@ class BlockFetcher {
   bool got_from_prefetch_buffer_ = false;
   rocksdb::CompressionType compression_type_;
   bool for_compaction_ = false;
+  // std::unique_ptr<char[]> enc_buf_;
 
   // return true if found
   bool TryGetUncompressBlockFromPersistentCache();
@@ -105,5 +107,6 @@ class BlockFetcher {
   void InsertCompressedBlockToPersistentCacheIfNeeded();
   void InsertUncompressedBlockToPersistentCacheIfNeeded();
   void CheckBlockChecksum();
+  void DecryptBlock();
 };
 }  // namespace rocksdb

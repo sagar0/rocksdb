@@ -2025,7 +2025,11 @@ std::unordered_map<std::string, OptionTypeInfo>
         {"sample_for_compression",
          {offset_of(&ColumnFamilyOptions::sample_for_compression),
           OptionType::kUInt64T, OptionVerificationType::kNormal, true,
-          offsetof(struct MutableCFOptions, sample_for_compression)}}};
+          offsetof(struct MutableCFOptions, sample_for_compression)}},
+        {"encrypted",
+         {offset_of(&ColumnFamilyOptions::encrypted),
+          OptionType::kBoolean, OptionVerificationType::kNormal, false,
+          0}}};
 
 std::unordered_map<std::string, OptionTypeInfo>
     OptionsHelper::fifo_compaction_options_type_info = {
