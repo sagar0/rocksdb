@@ -45,9 +45,16 @@
 #include "util/coding.h"
 #include "util/compression.h"
 #include "util/crc32c.h"
+#include "util/encryption.h"
 #include "util/stop_watch.h"
 #include "util/string_util.h"
 #include "util/xxhash.h"
+
+#ifdef OPENSSL
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#endif
 
 namespace rocksdb {
 
@@ -205,13 +212,89 @@ Slice CompressBlock(const Slice& raw, const CompressionInfo& info,
   return raw;
 }
 
-bool EncryptBlock(const Slice& raw, std::string *enc_output) {
-  fprintf(stderr, "Encrypting block--->\n");
-  for (size_t i = 0; i < raw.size(); i++) {
-    enc_output->push_back(char(raw[i] + 13));
-    fprintf(stderr, "[%d -> %d] ", raw[i], raw[i]+13);
+// bool EncryptBlock(const Slice& raw, std::string *enc_output) {
+//   fprintf(stderr, "Encrypting block--->\n");
+//   for (size_t i = 0; i < raw.size(); i++) {
+//     enc_output->push_back(char(raw[i] + 13));
+//     fprintf(stderr, "[%d -> %d] ", raw[i], raw[i]+13);
+//   }
+//   fprintf(stderr, "<---\n\n");
+//   return true;
+// }
+
+bool AesEncrypt(const unsigned char *source, size_t source_length,
+                       unsigned char *dest,
+                       const unsigned char *key, size_t key_length,
+                       const uint8_t *iv) {
+  EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+  if (!ctx) {
+    return false;
   }
-  fprintf(stderr, "<---\n\n");
+
+  const EVP_CIPHER *cipher = EVP_aes_256_cbc();
+
+  /* The real key to be used for encryption */
+  unsigned char rkey[32];
+  //AesCreateKey(key, key_length, rkey);
+
+  const unsigned int key_size = 32;
+  unsigned char *rkey_end;                              /* Real key boundary */
+  unsigned char *ptr;                                   /* Start of the real key*/
+  unsigned char *sptr;                                  /* Start of the working key */
+  unsigned char *key_end = ((unsigned char*)key) + key_length;  /* Working key boundary*/
+
+  rkey_end= rkey + key_size;
+
+  memset(rkey, 0, key_size);          /* Set initial key  */
+
+  for (ptr= rkey, sptr= (unsigned char *)key; sptr < key_end; ptr++, sptr++)
+  {
+    if (ptr == rkey_end)
+      /*  Just loop over tmp_key until we used all key */
+      ptr= rkey;
+    *ptr^= *sptr;
+  }
+
+  if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
+    return false;
+
+  int u_len, f_len;
+  if (!EVP_EncryptInit(ctx, cipher, rkey, iv))
+    goto aes_error;                             /* Error */
+  if (!EVP_CIPHER_CTX_set_padding(ctx, 1))
+    goto aes_error;                             /* Error */
+  if (!EVP_EncryptUpdate(ctx, dest, &u_len, source, source_length))
+    goto aes_error;                             /* Error */
+  if (!EVP_EncryptFinal_ex(ctx, dest + u_len, &f_len))
+    goto aes_error;                             /* Error */
+
+  EVP_CIPHER_CTX_free(ctx);
+
+  //return u_len + f_len;
+  return false;
+
+aes_error:
+  /* need to explicitly clean up the error if we want to ignore it */
+  ERR_clear_error();
+  EVP_CIPHER_CTX_free(ctx);
+  return false;
+}
+
+
+bool EncryptBlock(const Slice& raw, char *enc_output) {
+
+  fprintf(stderr, "Encrypting block--->\n");
+
+  // AES has 128 bit block, and 128 bit IV. => 32 bytes
+  uint8_t iv[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  unsigned char key[64];
+  for (int i = 0; i < 64; i++) {
+    key[i] = i;
+  }
+
+  AesEncrypt((const unsigned char*)raw.data(), raw.size(), (unsigned char*)enc_output, key, 64, iv);
+
   return true;
 }
 
@@ -708,10 +791,12 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
   }
 
   Slice enc_block_contents;
-  std::string enc_output;
+  // std::string enc_output;
+  size_t bc_size = block_contents.size();
+  char enc_output[bc_size];
   if (r->ioptions.encrypted && is_data_block) {
-    EncryptBlock(block_contents, &enc_output);
-    block_contents = Slice(enc_output);
+    EncryptBlock(block_contents, enc_output);
+    block_contents = Slice(enc_output, bc_size);
   }
 
   WriteRawBlock(block_contents, type, handle, is_data_block);
