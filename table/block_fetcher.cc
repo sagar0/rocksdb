@@ -37,62 +37,88 @@
 
 namespace rocksdb {
 
-bool AesDecrypt(const unsigned char *source, size_t source_length,
-                       unsigned char *dest,
-                       const unsigned char *key, size_t key_length,
-                       const uint8_t *iv) {
+// Returns decrypted text length
+inline int AesDecrypt(const unsigned char *ciphertext,
+                      const size_t ciphertext_length, unsigned char *plaintext,
+                      const unsigned char *key, const unsigned char *iv) {
+  const EVP_CIPHER *cipher = EVP_aes_256_cbc();
+  // const unsigned int kAesKey256SizeInBits = 256;
+  // const unsigned int kAesKeySizeInBytes = kAesKey256SizeInBits / 8;
+  // const unsigned int kAesBlockizeInBits = 128;
+
+  /* Create and initialize the context */
   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
   if (!ctx) {
     return false;
-  }
-
-  const EVP_CIPHER *cipher = EVP_aes_256_cbc();
-
-  /* The real key to be used for decryption */
-  unsigned char rkey[32];
-  // AesCreateKey(key, key_length, rkey);
-
-  const unsigned int key_size = 32;
-  unsigned char *rkey_end;                              /* Real key boundary */
-  unsigned char *ptr;                                   /* Start of the real key*/
-  unsigned char *sptr;                                  /* Start of the working key */
-  unsigned char *key_end = ((unsigned char*)key) + key_length;  /* Working key boundary*/
-
-  rkey_end= rkey + key_size;
-
-  memset(rkey, 0, key_size);          /* Set initial key  */
-
-  for (ptr= rkey, sptr= (unsigned char *)key; sptr < key_end; ptr++, sptr++)
-  {
-    if (ptr == rkey_end)
-      /*  Just loop over tmp_key until we used all key */
-      ptr= rkey;
-    *ptr^= *sptr;
   }
 
   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
     return false;
 
   int u_len, f_len;
-  if (!EVP_DecryptInit(ctx, cipher, rkey, iv))
+  /*
+   * Initialise the decryption operation. IMPORTANT - ensure you use a key
+   * and IV size appropriate for your cipher
+   * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+   * IV size for *most* modes is the same as the block size. For AES this
+   * is 128 bits
+   */
+  if (1 != EVP_DecryptInit_ex(ctx, cipher, NULL, key, iv)) {
     goto aes_error;                             /* Error */
-  if (!EVP_CIPHER_CTX_set_padding(ctx, 1))
+  }
+
+  // Padding not necessary
+  // if (!EVP_CIPHER_CTX_set_padding(ctx, 1)) {
+  //   goto aes_error;                             /* Error */
+  // }
+
+  /*
+   * Provide the message to be decrypted, and obtain the plaintext output.
+   * EVP_DecryptUpdate can be called multiple times if necessary.
+   */
+  if (1 != EVP_DecryptUpdate(ctx, plaintext, &u_len, ciphertext,
+                             ciphertext_length)) {
     goto aes_error;                             /* Error */
-  if (!EVP_DecryptUpdate(ctx, dest, &u_len, source, source_length))
+  }
+
+  /*
+   * Finalise the decryption. Further plaintext bytes may be written at
+   * this stage.
+   */
+  if (1 != EVP_DecryptFinal_ex(ctx, plaintext + u_len, &f_len)) {
     goto aes_error;                             /* Error */
-  if (!EVP_DecryptFinal_ex(ctx, dest + u_len, &f_len))
-    goto aes_error;                             /* Error */
+  }
 
   EVP_CIPHER_CTX_free(ctx);
 
-  //return u_len + f_len;
-  return false;
+  return u_len + f_len;
 
 aes_error:
   /* need to explicitly clean up the error if we want to ignore it */
   ERR_clear_error();
   EVP_CIPHER_CTX_free(ctx);
-  return false;
+  return 0;
+}
+
+inline void BlockFetcher::DecryptBlock() {
+  // Decrypted text will never exceed the encrypted text. So the buffer to store
+  // the plaintext can be block_size_ in length.
+  unsigned char decrypt_buf[block_size_];
+  /* A 256 bit key */
+  const unsigned char *key = reinterpret_cast<const unsigned char *>(
+      "01234567890123456789012345678901");
+  /* A 128 bit IV */
+  const unsigned char *iv =
+      reinterpret_cast<const unsigned char *>("0123456789012345");
+  int decryptedtext_len =
+      AesDecrypt(reinterpret_cast<const unsigned char *>(slice_.data()),
+                 slice_.size() - kBlockTrailerSize, decrypt_buf, key, iv);
+
+  memmove(used_buf_ + decryptedtext_len, used_buf_ + block_size_,
+          kBlockTrailerSize);
+  memcpy(used_buf_, decrypt_buf, decryptedtext_len);
+  slice_ = Slice(used_buf_, decryptedtext_len + kBlockTrailerSize);
+  block_size_ = decryptedtext_len;
 }
 
 inline void BlockFetcher::CheckBlockChecksum() {
@@ -260,37 +286,6 @@ inline void BlockFetcher::GetBlockContents() {
 #ifndef NDEBUG
   contents_->is_raw_block = true;
 #endif
-}
-
-// void BlockFetcher::DecryptBlock() {
-//   //enc_buf_.reset(new char[slice_.size()]);
-//   std::unique_ptr<char[]> enc_buf(new char[block_size_]);
-//   fprintf(stderr, "Decrypting block--->\n");
-//   for (size_t i = 0; i < block_size_; i++) {
-//     enc_buf[i] = slice_[i] - 13;
-//     fprintf(stderr, "[%d -> %d] ", slice_[i], (slice_[i] - 13));
-//   }
-//   fprintf(stderr, "<---\n\n");
-//   memcpy(used_buf_, enc_buf.get(), block_size_);
-//   slice_ = Slice(used_buf_, block_size_ + kBlockTrailerSize);
-// }
-
-void BlockFetcher::DecryptBlock() {
-  //enc_buf_.reset(new char[slice_.size()]);
-  std::unique_ptr<char[]> enc_buf(new char[block_size_]);
-  fprintf(stderr, "Decrypting block--->\n");
-
-  // AES has 128 bit block, and 128 bit IV. => 32 bytes
-  uint8_t iv[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-  unsigned char key[64];
-  for (int i = 0; i < 64; i++) {
-    key[i] = i;
-  }
-
-  AesDecrypt((const unsigned char*)slice_.data(), slice_.size(), (unsigned char*)enc_buf.get(), key, 64, iv);
-
-  memcpy(used_buf_, enc_buf.get(), block_size_);
-  slice_ = Slice(used_buf_, block_size_ + kBlockTrailerSize);
 }
 
 Status BlockFetcher::ReadBlockContents() {

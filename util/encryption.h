@@ -12,171 +12,134 @@
 
 #ifdef OPENSSL
 #include <openssl/aes.h>
-#include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #endif
 
 namespace rocksdb {
-inline bool InitCrypto() {
-  return true;
-}
 
-// Copied from MySQL
-
-/**
-  Transforms an arbitrary long key into a fixed length AES key
-
-  AES keys are of fixed length. This routine takes an arbitrary long key
-  iterates over it in AES key length increment and XORs the bytes with the
-  AES key buffer being prepared.
-  The bytes from the last incomplete iteration are XORed to the start
-  of the key until their depletion.
-  Needed since crypto function routines expect a fixed length key.
-
-  @param key        [in]       Key to use for real key creation
-  @param key_length [in]       Length of the key
-  @param rkey       [out]      Real key (used by OpenSSL/YaSSL)
-  @param opmode     [out]      encryption mode
-*/
-
-// void AesCreateKey(const unsigned char *key, size_t key_length,
-//                   unsigned char *rkey)
-// {
-//   const unsigned int key_size = 32;
-//   unsigned char *rkey_end;                              /* Real key boundary */
-//   unsigned char *ptr;                                   /* Start of the real key*/
-//   unsigned char *sptr;                                  /* Start of the working key */
-//   unsigned char *key_end = ((unsigned char*)key) + key_length;  /* Working key boundary*/
+// // Returns encrypted text length
+// inline int AesEncrypt(const unsigned char *plaintext,
+//                       const size_t plaintext_length, unsigned char *ciphertext,
+//                       const unsigned char *key, const unsigned char *iv) {
+//   const EVP_CIPHER *cipher = EVP_aes_256_cbc();
+//   // const unsigned int kAesKey256SizeInBits = 256;
+//   // const unsigned int kAesKeySizeInBytes = kAesKey256SizeInBits / 8;
+//   // const unsigned int kAesBlockizeInBits = 128;
 //
-//   rkey_end= rkey + key_size;
-//
-//   memset(rkey, 0, key_size);          /* Set initial key  */
-//
-//   for (ptr= rkey, sptr= (unsigned char *)key; sptr < key_end; ptr++, sptr++)
-//   {
-//     if (ptr == rkey_end)
-//       /*  Just loop over tmp_key until we used all key */
-//       ptr= rkey;
-//     *ptr^= *sptr;
-//   }
-// }
-
-// bool AesEncrypt(const unsigned char *source, size_t source_length,
-//                        unsigned char *dest,
-//                        const unsigned char *key, size_t key_length,
-//                        const uint8_t *iv) {
+//   /* Create and initialize the context */
 //   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 //   if (!ctx) {
 //     return false;
 //   }
 //
-//   const EVP_CIPHER *cipher = EVP_aes_256_cbc();
-//
-//   /* The real key to be used for encryption */
-//   unsigned char rkey[32];
-//   //AesCreateKey(key, key_length, rkey);
-//
-//   const unsigned int key_size = 32;
-//   unsigned char *rkey_end;                              /* Real key boundary */
-//   unsigned char *ptr;                                   /* Start of the real key*/
-//   unsigned char *sptr;                                  /* Start of the working key */
-//   unsigned char *key_end = ((unsigned char*)key) + key_length;  /* Working key boundary*/
-//
-//   rkey_end= rkey + key_size;
-//
-//   memset(rkey, 0, key_size);          /* Set initial key  */
-//
-//   for (ptr= rkey, sptr= (unsigned char *)key; sptr < key_end; ptr++, sptr++)
-//   {
-//     if (ptr == rkey_end)
-//       /*  Just loop over tmp_key until we used all key */
-//       ptr= rkey;
-//     *ptr^= *sptr;
-//   }
-//
-//   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
-//     return false;
+//   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv)) return false;
 //
 //   int u_len, f_len;
-//   if (!EVP_EncryptInit(ctx, cipher, rkey, iv))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_CIPHER_CTX_set_padding(ctx, 1))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_EncryptUpdate(ctx, dest, &u_len, source, source_length))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_EncryptFinal_ex(ctx, dest + u_len, &f_len))
-//     goto aes_error;                             /* Error */
+//   /*
+//    * Initialise the encryption operation. IMPORTANT - ensure you use a key
+//    * and IV size appropriate for your cipher
+//    * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+//    * IV size for *most* modes is the same as the block size. For AES this
+//    * is 128 bits
+//    */
+//   if (1 != EVP_EncryptInit_ex(ctx, cipher, NULL, key, iv)) {
+//     goto aes_error; /* Error */
+//   }
+//
+//   // Padding not necessary
+//   // if (!EVP_CIPHER_CTX_set_padding(ctx, 1)) {
+//   //   goto aes_error;                             /* Error */
+//   // }
+//
+//   /*
+//    * Provide the message to be encrypted, and obtain the encrypted output.
+//    * EVP_EncryptUpdate can be called multiple times if necessary
+//    */
+//   if (1 !=
+//       EVP_EncryptUpdate(ctx, ciphertext, &u_len, plaintext, plaintext_length)) {
+//     goto aes_error; /* Error */
+//   }
+//
+//   /*
+//    * Finalise the encryption. Further ciphertext bytes may be written at
+//    * this stage.
+//    */
+//   if (1 != EVP_EncryptFinal_ex(ctx, ciphertext + u_len, &f_len)) {
+//     goto aes_error; /* Error */
+//   }
 //
 //   EVP_CIPHER_CTX_free(ctx);
 //
-//   //return u_len + f_len;
-//   return false;
+//   return u_len + f_len;
 //
 // aes_error:
 //   /* need to explicitly clean up the error if we want to ignore it */
 //   ERR_clear_error();
 //   EVP_CIPHER_CTX_free(ctx);
-//   return false;
+//   return 0;
 // }
 //
+// // Returns decrypted text length
+// inline int AesDecrypt(const unsigned char *ciphertext,
+//                       const size_t ciphertext_length, unsigned char *plaintext,
+//                       const unsigned char *key, const unsigned char *iv) {
+//   const EVP_CIPHER *cipher = EVP_aes_256_cbc();
+//   // const unsigned int kAesKey256SizeInBits = 256;
+//   // const unsigned int kAesKeySizeInBytes = kAesKey256SizeInBits / 8;
+//   // const unsigned int kAesBlockizeInBits = 128;
 //
-// bool AesDecrypt(const unsigned char *source, size_t source_length,
-//                        unsigned char *dest,
-//                        const unsigned char *key, size_t key_length,
-//                        const uint8_t *iv) {
+//   /* Create and initialize the context */
 //   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
 //   if (!ctx) {
 //     return false;
 //   }
 //
-//   const EVP_CIPHER *cipher = EVP_aes_256_cbc();
-//
-//   /* The real key to be used for decryption */
-//   unsigned char rkey[32];
-//   // AesCreateKey(key, key_length, rkey);
-//
-//   const unsigned int key_size = 32;
-//   unsigned char *rkey_end;                              /* Real key boundary */
-//   unsigned char *ptr;                                   /* Start of the real key*/
-//   unsigned char *sptr;                                  /* Start of the working key */
-//   unsigned char *key_end = ((unsigned char*)key) + key_length;  /* Working key boundary*/
-//
-//   rkey_end= rkey + key_size;
-//
-//   memset(rkey, 0, key_size);          /* Set initial key  */
-//
-//   for (ptr= rkey, sptr= (unsigned char *)key; sptr < key_end; ptr++, sptr++)
-//   {
-//     if (ptr == rkey_end)
-//       /*  Just loop over tmp_key until we used all key */
-//       ptr= rkey;
-//     *ptr^= *sptr;
-//   }
-//
-//   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
-//     return false;
+//   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv)) return false;
 //
 //   int u_len, f_len;
-//   if (!EVP_DecryptInit(ctx, cipher, rkey, iv))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_CIPHER_CTX_set_padding(ctx, 1))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_DecryptUpdate(ctx, dest, &u_len, source, source_length))
-//     goto aes_error;                             /* Error */
-//   if (!EVP_DecryptFinal_ex(ctx, dest + u_len, &f_len))
-//     goto aes_error;                             /* Error */
+//   /*
+//    * Initialise the decryption operation. IMPORTANT - ensure you use a key
+//    * and IV size appropriate for your cipher
+//    * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+//    * IV size for *most* modes is the same as the block size. For AES this
+//    * is 128 bits
+//    */
+//   if (1 != EVP_DecryptInit_ex(ctx, cipher, NULL, key, iv)) {
+//     goto aes_error; /* Error */
+//   }
+//
+//   // Padding not necessary
+//   // if (!EVP_CIPHER_CTX_set_padding(ctx, 1)) {
+//   //   goto aes_error;                             /* Error */
+//   // }
+//
+//   /*
+//    * Provide the message to be decrypted, and obtain the plaintext output.
+//    * EVP_DecryptUpdate can be called multiple times if necessary.
+//    */
+//   if (1 != EVP_DecryptUpdate(ctx, plaintext, &u_len, ciphertext,
+//                              ciphertext_length)) {
+//     goto aes_error; /* Error */
+//   }
+//
+//   /*
+//    * Finalise the decryption. Further plaintext bytes may be written at
+//    * this stage.
+//    */
+//   if (1 != EVP_DecryptFinal_ex(ctx, plaintext + u_len, &f_len)) {
+//     goto aes_error; /* Error */
+//   }
 //
 //   EVP_CIPHER_CTX_free(ctx);
 //
-//   //return u_len + f_len;
-//   return false;
+//   return u_len + f_len;
 //
 // aes_error:
 //   /* need to explicitly clean up the error if we want to ignore it */
 //   ERR_clear_error();
 //   EVP_CIPHER_CTX_free(ctx);
-//   return false;
+//   return 0;
 // }
-
 
 }  // namespace rocksdb
