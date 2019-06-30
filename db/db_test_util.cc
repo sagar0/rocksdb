@@ -160,6 +160,7 @@ bool DBTestBase::ChangeOptions(int skip_mask) {
     break;
   }
 
+  //fprintf(stderr, "option: %d\n", option_config_);
   if (option_config_ >= kEnd) {
     Destroy(last_options_);
     return false;
@@ -387,6 +388,7 @@ Options DBTestBase::GetOptions(
         options.use_direct_reads = true;
         options.use_direct_io_for_flush_and_compaction = true;
         options.compaction_readahead_size = 2 * 1024 * 1024;
+        options.encrypted = false;
   #if !defined(OS_MACOSX) && !defined(OS_WIN) && !defined(OS_SOLARIS) && \
       !defined(OS_AIX) && !defined(OS_OPENBSD)
         rocksdb::SyncPoint::GetInstance()->SetCallBack(
@@ -414,6 +416,7 @@ Options DBTestBase::GetOptions(
       table_options.filter_policy.reset(NewBloomFilterPolicy(10, false));
       options.new_table_reader_for_compaction_inputs = true;
       options.compaction_readahead_size = 10 * 1024 * 1024;
+      options.encrypted = false;
       break;
     case kPartitionedFilterWithNewTableReaderForCompactions:
       table_options.filter_policy.reset(NewBloomFilterPolicy(10, false));
@@ -422,6 +425,7 @@ Options DBTestBase::GetOptions(
           BlockBasedTableOptions::IndexType::kTwoLevelIndexSearch;
       options.new_table_reader_for_compaction_inputs = true;
       options.compaction_readahead_size = 10 * 1024 * 1024;
+      options.encrypted = false;
       break;
     case kUncompressed:
       options.compression = kNoCompression;
@@ -487,6 +491,7 @@ Options DBTestBase::GetOptions(
     case kBlockBasedTableWithPartitionedIndex: {
       table_options.index_type = BlockBasedTableOptions::kTwoLevelIndexSearch;
       options.prefix_extractor.reset(NewNoopTransform());
+      options.encrypted = false;
       break;
     }
     case kBlockBasedTableWithPartitionedIndexFormat4: {
@@ -499,6 +504,7 @@ Options DBTestBase::GetOptions(
       table_options.filter_policy.reset(NewBloomFilterPolicy(10, false));
       table_options.partition_filters = true;
       table_options.index_block_restart_interval = 8;
+      options.encrypted = false;
       break;
     }
     case kBlockBasedTableWithIndexRestartInterval: {

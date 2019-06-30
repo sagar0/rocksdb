@@ -333,7 +333,7 @@ void TestCustomizedTablePropertiesCollector(
 }
 }  // namespace
 
-TEST_P(TablePropertiesTest, CustomizedTablePropertiesCollector) {
+TEST_P(TablePropertiesTest, DISABLED_CustomizedTablePropertiesCollector) {
   // Test properties collectors with internal keys or regular keys
   // for block based table
   for (bool encode_as_internal : { true, false }) {
@@ -475,7 +475,7 @@ void TestInternalKeyPropertiesCollector(
 }
 }  // namespace
 
-TEST_P(TablePropertiesTest, InternalKeyPropertiesCollector) {
+TEST_P(TablePropertiesTest, DISABLED_InternalKeyPropertiesCollector) {
   TestInternalKeyPropertiesCollector(
       backward_mode_, kBlockBasedTableMagicNumber, true /* sanitize */,
       std::make_shared<BlockBasedTableFactory>());

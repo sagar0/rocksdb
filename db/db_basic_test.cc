@@ -37,7 +37,7 @@ TEST_F(DBBasicTest, OpenWhenOpen) {
   delete db2;
 }
 
-TEST_F(DBBasicTest, EncryptedOpen) {
+TEST_F(DBBasicTest, EncryptedDB) {
   Random rnd(301);
 
   Options options = CurrentOptions();

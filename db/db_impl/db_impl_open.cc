@@ -1211,6 +1211,11 @@ Status DB::Open(const DBOptions& db_options, const std::string& dbname,
                 std::vector<ColumnFamilyHandle*>* handles, DB** dbptr) {
   const bool kSeqPerBatch = true;
   const bool kBatchPerTxn = true;
+  // for (auto& cf : column_families) {
+  //   if (cf.options.encrypted && (db_options.use_direct_reads || db_options.use_direct_io_for_flush_and_compaction)) {
+  //     cf.options.encrypted = false;
+  //   }
+  // }
   return DBImpl::Open(db_options, dbname, column_families, handles, dbptr,
                       !kSeqPerBatch, kBatchPerTxn);
 }

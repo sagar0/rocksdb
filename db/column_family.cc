@@ -335,6 +335,16 @@ ColumnFamilyOptions SanitizeOptions(const ImmutableDBOptions& db_options,
     result.max_compaction_bytes = result.target_file_size_base * 25;
   }
 
+  // Santinize Encryption
+  // Disable encryption with certain incompatible options.
+  if (result.encrypted && result.table_factory->Name() != BlockBasedTableFactory().Name()) {
+    result.encrypted = false;
+  }
+
+  if (result.encrypted && (db_options.allow_mmap_reads || db_options.allow_mmap_writes)) {
+    result.encrypted = false;
+  }
+
   return result;
 }
 

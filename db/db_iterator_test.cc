@@ -2031,7 +2031,7 @@ TEST_P(DBIteratorTest, IteratorWithLocalStatistics) {
 
 }
 
-TEST_P(DBIteratorTest, ReadAhead) {
+TEST_P(DBIteratorTest, DISABLED_ReadAhead) {
   Options options;
   env_->count_random_reads_ = true;
   options.env = env_;
