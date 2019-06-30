@@ -782,15 +782,6 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
     RecordTick(r->ioptions.statistics, NUMBER_BLOCK_NOT_COMPRESSED);
   }
 
-  // encrypted output buffer should be at least plaintext + AES block size, as
-  // encrypted text is always AES-block-aligned.
-  const size_t kEncOuputBufSize = block_contents.size() + 128;
-  char enc_output[kEncOuputBufSize];
-  if (r->ioptions.encrypted && is_data_block) {
-    int enc_len = EncryptBlock(block_contents, enc_output);
-    block_contents = Slice(enc_output, enc_len);
-  }
-
   WriteRawBlock(block_contents, type, handle, is_data_block);
   r->compressed_output.clear();
   if (is_data_block) {
@@ -808,10 +799,22 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
                                            bool is_data_block) {
   Rep* r = rep_;
   StopWatch sw(r->ioptions.env, r->ioptions.statistics, WRITE_RAW_BLOCK_MICROS);
+
+  // Encryption
+  // Encrypted output buffer should be at least plaintext + AES block size, as
+  // encrypted text is always AES-block-aligned.
+  const size_t kEncOuputBufSize = block_contents.size() + 128;
+  char enc_output[kEncOuputBufSize];
+  Slice final_block_contents = block_contents;
+  if (r->ioptions.encrypted) {
+    int enc_len = EncryptBlock(block_contents, enc_output);
+    final_block_contents = Slice(enc_output, enc_len);
+  }
+
   handle->set_offset(r->offset);
-  handle->set_size(block_contents.size());
+  handle->set_size(final_block_contents.size());
   assert(r->status.ok());
-  r->status = r->file->Append(block_contents);
+  r->status = r->file->Append(final_block_contents);
   if (r->status.ok()) {
     char trailer[kBlockTrailerSize];
     trailer[0] = type;
@@ -821,15 +824,15 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
         EncodeFixed32(trailer_without_type, 0);
         break;
       case kCRC32c: {
-        auto crc = crc32c::Value(block_contents.data(), block_contents.size());
+        auto crc = crc32c::Value(final_block_contents.data(), final_block_contents.size());
         crc = crc32c::Extend(crc, trailer, 1);  // Extend to cover block type
         EncodeFixed32(trailer_without_type, crc32c::Mask(crc));
         break;
       }
       case kxxHash: {
         void* xxh = XXH32_init(0);
-        XXH32_update(xxh, block_contents.data(),
-                     static_cast<uint32_t>(block_contents.size()));
+        XXH32_update(xxh, final_block_contents.data(),
+                     static_cast<uint32_t>(final_block_contents.size()));
         XXH32_update(xxh, trailer, 1);  // Extend  to cover block type
         EncodeFixed32(trailer_without_type, XXH32_digest(xxh));
         break;
@@ -837,8 +840,8 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
       case kxxHash64: {
         XXH64_state_t* const state = XXH64_createState();
         XXH64_reset(state, 0);
-        XXH64_update(state, block_contents.data(),
-                     static_cast<uint32_t>(block_contents.size()));
+        XXH64_update(state, final_block_contents.data(),
+                     static_cast<uint32_t>(final_block_contents.size()));
         XXH64_update(state, trailer, 1);  // Extend  to cover block type
         EncodeFixed32(
             trailer_without_type,
@@ -855,13 +858,13 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
         static_cast<char*>(trailer));
     r->status = r->file->Append(Slice(trailer, kBlockTrailerSize));
     if (r->status.ok()) {
-      r->status = InsertBlockInCache(block_contents, type, handle);
+      r->status = InsertBlockInCache(final_block_contents, type, handle);
     }
     if (r->status.ok()) {
-      r->offset += block_contents.size() + kBlockTrailerSize;
+      r->offset += final_block_contents.size() + kBlockTrailerSize;
       if (r->table_options.block_align && is_data_block) {
         size_t pad_bytes =
-            (r->alignment - ((block_contents.size() + kBlockTrailerSize) &
+            (r->alignment - ((final_block_contents.size() + kBlockTrailerSize) &
                              (r->alignment - 1))) &
             (r->alignment - 1);
         r->status = r->file->Pad(pad_bytes);

@@ -348,15 +348,13 @@ Status BlockFetcher::ReadBlockContents() {
 
     CheckBlockChecksum();
 
-
     // Decryption
     if (!status_.ok()) {
       return status_;
     }
-    if (ioptions_.encrypted && block_type_ == BlockType::kData) {
+    if (ioptions_.encrypted) {
       DecryptBlock();
     }
-
 
     if (status_.ok()) {
       InsertCompressedBlockToPersistentCacheIfNeeded();
