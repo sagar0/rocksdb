@@ -191,7 +191,14 @@ inline bool BlockFetcher::TryGetFromPrefetchBuffer() {
       return true;
     }
     got_from_prefetch_buffer_ = true;
-    used_buf_ = const_cast<char*>(slice_.data());
+    // used_buf_ = const_cast<char*>(slice_.data());
+    heap_buf_ = AllocateBlock(block_size_ + kBlockTrailerSize, memory_allocator_);
+    used_buf_ = heap_buf_.get();
+    memcpy(used_buf_, slice_.data(), block_size_ + kBlockTrailerSize);
+
+    if (ioptions_.encrypted) {
+      DecryptBlock();
+    }
   }
   return got_from_prefetch_buffer_;
 }
@@ -271,7 +278,7 @@ inline void BlockFetcher::GetBlockContents() {
   } else {
     // page can be either uncompressed or compressed, the buffer either stack
     // or heap provided. Refer to https://github.com/facebook/rocksdb/pull/4096
-    if (got_from_prefetch_buffer_ || used_buf_ == &stack_buf_[0]) {
+    if ((!ioptions_.encrypted && got_from_prefetch_buffer_) || used_buf_ == &stack_buf_[0]) {
       CopyBufferToHeap();
     } else if (used_buf_ == compressed_buf_.get()) {
       if (compression_type_ == kNoCompression &&
