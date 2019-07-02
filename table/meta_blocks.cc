@@ -96,6 +96,9 @@ void PropertyBlockBuilder::AddTableProperty(const TableProperties& props) {
   if (props.file_creation_time > 0) {
     Add(TablePropertiesNames::kFileCreationTime, props.file_creation_time);
   }
+  if (props.encrypted > 0) {
+    Add(TablePropertiesNames::kEncrypted, props.encrypted);
+  }
 
   if (!props.filter_policy_name.empty()) {
     Add(TablePropertiesNames::kFilterPolicy, props.filter_policy_name);
@@ -218,7 +221,7 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
       ioptions, false /* decompress */, false /*maybe_compressed*/,
       BlockType::kProperties, UncompressionDict::GetEmptyDict(), cache_options,
       memory_allocator);
-  s = block_fetcher.ReadBlockContents();
+  s = block_fetcher.ReadBlockContents(false /* decrypt=false */);
   // property block is never compressed. Need to add uncompress logic if we are
   // to compress it..
 
@@ -270,6 +273,8 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
        &new_table_properties->oldest_key_time},
       {TablePropertiesNames::kFileCreationTime,
        &new_table_properties->file_creation_time},
+      {TablePropertiesNames::kEncrypted,
+       &new_table_properties->encrypted},
   };
 
   std::string last_key;

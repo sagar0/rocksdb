@@ -58,6 +58,7 @@ struct TablePropertiesNames {
   static const std::string kCreationTime;
   static const std::string kOldestKeyTime;
   static const std::string kFileCreationTime;
+  static const std::string kEncrypted;
 };
 
 extern const std::string kPropertiesBlock;
@@ -187,6 +188,8 @@ struct TableProperties {
   uint64_t oldest_key_time = 0;
   // Actual SST file creation time. 0 means unknown.
   uint64_t file_creation_time = 0;
+  // Is the table encrypted?
+  uint64_t encrypted = 0;
 
   // Name of the column family with which this SST file is associated.
   // If column family is unknown, `column_family_name` will be an empty string.

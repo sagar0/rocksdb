@@ -591,6 +591,8 @@ struct BlockBasedTable::Rep {
   bool closed = false;
   const bool immortal_table;
 
+  bool encrypted = false;
+
   SequenceNumber get_global_seqno(BlockType block_type) const {
     return (block_type == BlockType::kFilter ||
             block_type == BlockType::kCompressionDictionary)

@@ -1301,6 +1301,7 @@ Status BlockBasedTable::ReadPropertiesBlock(
                CompressionTypeToString(kZSTD) ||
            rep_->table_properties->compression_name ==
                CompressionTypeToString(kZSTDNotFinalCompression));
+      rep_->encrypted = rep_->table_properties->encrypted;
     }
   } else {
     ROCKS_LOG_ERROR(rep_->ioptions.info_log,

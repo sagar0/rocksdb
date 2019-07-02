@@ -796,7 +796,8 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
 void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
                                            CompressionType type,
                                            BlockHandle* handle,
-                                           bool is_data_block) {
+                                           bool is_data_block,
+                                           bool encrypt) {
   Rep* r = rep_;
   StopWatch sw(r->ioptions.env, r->ioptions.statistics, WRITE_RAW_BLOCK_MICROS);
 
@@ -806,7 +807,7 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
   const size_t kEncOuputBufSize = block_contents.size() + 128;
   char enc_output[kEncOuputBufSize];
   Slice final_block_contents = block_contents;
-  if (r->ioptions.encrypted) {
+  if (r->ioptions.encrypted && encrypt) {
     int enc_len = EncryptBlock(block_contents, enc_output);
     final_block_contents = Slice(enc_output, enc_len);
   }
@@ -1058,6 +1059,7 @@ void BlockBasedTableBuilder::WritePropertiesBlock(
     rep_->props.creation_time = rep_->creation_time;
     rep_->props.oldest_key_time = rep_->oldest_key_time;
     rep_->props.file_creation_time = rep_->file_creation_time;
+    rep_->props.encrypted = rep_->ioptions.encrypted ? 1 : 0;
 
     // Add basic properties
     property_block_builder.AddTableProperty(rep_->props);
@@ -1068,7 +1070,8 @@ void BlockBasedTableBuilder::WritePropertiesBlock(
                                          &property_block_builder);
 
     WriteRawBlock(property_block_builder.Finish(), kNoCompression,
-                  &properties_block_handle);
+                  &properties_block_handle, false /* is_data_block */,
+                  false /* encrypt */);
   }
   if (ok()) {
 #ifndef NDEBUG

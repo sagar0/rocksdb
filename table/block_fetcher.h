@@ -62,7 +62,7 @@ class BlockFetcher {
         memory_allocator_compressed_(memory_allocator_compressed),
         for_compaction_(for_compaction) {}
 
-  Status ReadBlockContents();
+  Status ReadBlockContents(bool decrypt = true);
   CompressionType get_compression_type() const { return compression_type_; }
 
  private:
@@ -93,17 +93,16 @@ class BlockFetcher {
   bool got_from_prefetch_buffer_ = false;
   rocksdb::CompressionType compression_type_;
   bool for_compaction_ = false;
-  // std::unique_ptr<char[]> enc_buf_;
 
   // return true if found
   bool TryGetUncompressBlockFromPersistentCache();
   // return true if found
-  bool TryGetFromPrefetchBuffer();
+  bool TryGetFromPrefetchBuffer(bool decrypt);
   bool TryGetCompressedBlockFromPersistentCache();
   void PrepareBufferForBlockFromFile();
   // Copy content from used_buf_ to new heap buffer.
   void CopyBufferToHeap();
-  void GetBlockContents();
+  void GetBlockContents(bool decrypt);
   void InsertCompressedBlockToPersistentCacheIfNeeded();
   void InsertUncompressedBlockToPersistentCacheIfNeeded();
   void CheckBlockChecksum();
