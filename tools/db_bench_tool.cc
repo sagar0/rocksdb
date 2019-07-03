@@ -1156,6 +1156,8 @@ DEFINE_int64(multiread_stride, 0,
              "Stride length for the keys in a MultiGet batch");
 DEFINE_bool(multiread_batched, false, "Use the new MultiGet API");
 
+DEFINE_bool(encrypted, false, "Encrypt DB");
+
 enum RepFactory {
   kSkipList,
   kPrefixHash,
@@ -3679,6 +3681,8 @@ class Benchmark {
     }
     options.max_successive_merges = FLAGS_max_successive_merges;
     options.report_bg_io_stats = FLAGS_report_bg_io_stats;
+
+    options.encrypted = FLAGS_encrypted;
 
     // set universal style compaction configurations, if applicable
     if (FLAGS_universal_size_ratio != 0) {
