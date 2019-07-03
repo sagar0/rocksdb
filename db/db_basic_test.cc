@@ -72,7 +72,42 @@ TEST_F(DBBasicTest, EncryptedDB) {
   ASSERT_EQ(v1, Get("foo"));
 }
 
-TEST_F(DBBasicTest, EncryptedDBWithDirectIO) {
+TEST_F(DBBasicTest, EncryptedCF) {
+  Random rnd(301);
+
+  Options enc_options;
+  enc_options.encrypted = true;
+  enc_options = CurrentOptions(enc_options);
+
+  Options options = CurrentOptions();
+  CreateAndReopenWithCF({"pikachu"}, enc_options);
+  ReopenWithColumnFamilies({"default", "pikachu"},
+      std::vector<Options>({options, enc_options}));
+
+  std::string v1(RandomString(&rnd, 1000));
+  std::string v2(RandomString(&rnd, 1000));
+  std::string v3(RandomString(&rnd, 1000));
+  ASSERT_OK(Put(1, "foo", v1));
+  ASSERT_OK(Put(1, "bar", v2));
+  ASSERT_OK(Put(1, "baz", v3));
+  ASSERT_OK(Flush(1));
+
+  ASSERT_OK(Put(0, "a", "1"));
+  ASSERT_OK(Put(0, "b", "2"));
+  ASSERT_OK(Flush(0));
+
+  // Verify
+  ASSERT_EQ(v1, Get(1, "foo"));
+  ASSERT_EQ(v2, Get(1, "bar"));
+  ASSERT_EQ(v3, Get(1, "baz"));
+
+  ASSERT_EQ("1", Get(0, "a"));
+  ASSERT_EQ("2", Get(0, "b"));
+}
+
+// This will not run on TMPFS, as Direct IO is not supported there.
+// Remove DISABLED to run on a regular filesystem.
+TEST_F(DBBasicTest, DISABLED_EncryptedDBWithDirectIO) {
   Random rnd(301);
 
   Options options = CurrentOptions();
