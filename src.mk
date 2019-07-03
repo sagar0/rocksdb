@@ -154,6 +154,7 @@ LIB_SOURCES =                                                   \
   util/concurrent_task_limiter_impl.cc                          \
   util/crc32c.cc                                                \
   util/dynamic_bloom.cc                                         \
+	util/encryption.cc                                            \
   util/file_reader_writer.cc                                    \
   util/filter_policy.cc                                         \
   util/hash.cc                                                  \

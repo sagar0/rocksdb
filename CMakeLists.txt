@@ -642,6 +642,7 @@ set(SOURCES
         util/dynamic_bloom.cc
         util/file_reader_writer.cc
         util/filter_policy.cc
+        util/encryption.cc
         util/hash.cc
         util/murmurhash.cc
         util/random.cc
