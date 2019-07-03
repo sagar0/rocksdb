@@ -141,7 +141,7 @@ TEST_P(DBBloomFilterTestDefFormatVersion, KeyMayExist) {
       ChangeOptions(kSkipPlainTable | kSkipHashIndex | kSkipFIFOCompaction));
 }
 
-TEST_F(DBBloomFilterTest, DISABLED_GetFilterByPrefixBloomCustomPrefixExtractor) {
+TEST_F(DBBloomFilterTest, GetFilterByPrefixBloomCustomPrefixExtractor) {
   for (bool partition_filters : {true, false}) {
     Options options = last_options_;
     options.prefix_extractor =
@@ -208,7 +208,7 @@ TEST_F(DBBloomFilterTest, DISABLED_GetFilterByPrefixBloomCustomPrefixExtractor) 
   }
 }
 
-TEST_F(DBBloomFilterTest, DISABLED_GetFilterByPrefixBloom) {
+TEST_F(DBBloomFilterTest, GetFilterByPrefixBloom) {
   for (bool partition_filters : {true, false}) {
     Options options = last_options_;
     options.prefix_extractor.reset(NewFixedPrefixTransform(8));
@@ -259,7 +259,7 @@ TEST_F(DBBloomFilterTest, DISABLED_GetFilterByPrefixBloom) {
   }
 }
 
-TEST_F(DBBloomFilterTest, DISABLED_WholeKeyFilterProp) {
+TEST_F(DBBloomFilterTest, WholeKeyFilterProp) {
   for (bool partition_filters : {true, false}) {
     Options options = last_options_;
     options.prefix_extractor.reset(NewFixedPrefixTransform(3));
@@ -914,7 +914,7 @@ class BloomStatsTestWithParam
 // 5 Call Get() for both keys - expext SST bloom hit stat to be 2
 // 6 Call Get() for nonexisting key - expect SST bloom miss stat to be 1
 // Test both: block and plain SST
-TEST_P(BloomStatsTestWithParam, DISABLED_BloomStatsTest) {
+TEST_P(BloomStatsTestWithParam, BloomStatsTest) {
   std::string key1("AAAA");
   std::string key2("RXDB");  // not in DB
   std::string key3("ZBRA");
@@ -956,7 +956,7 @@ TEST_P(BloomStatsTestWithParam, DISABLED_BloomStatsTest) {
 }
 
 // Same scenario as in BloomStatsTest but using an iterator
-TEST_P(BloomStatsTestWithParam, DISABLED_BloomStatsTestWithIter) {
+TEST_P(BloomStatsTestWithParam, BloomStatsTestWithIter) {
   std::string key1("AAAA");
   std::string key2("RXDB");  // not in DB
   std::string key3("ZBRA");

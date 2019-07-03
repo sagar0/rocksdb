@@ -1942,7 +1942,7 @@ TEST_F(DBTest2, TestPerfContextIterCpuTime) {
 #endif  // OS_LINUX
 
 #ifndef OS_SOLARIS // GetUniqueIdFromFile is not implemented
-TEST_F(DBTest2, DISABLED_PersistentCache) {
+TEST_F(DBTest2, PersistentCache) {
   int num_iter = 80;
 
   Options options;
@@ -2414,7 +2414,7 @@ TEST_F(DBTest2, OptimizeForPointLookup) {
   ASSERT_EQ("v1", Get("foo"));
 }
 
-TEST_F(DBTest2, DISABLED_OptimizeForSmallDB) {
+TEST_F(DBTest2, OptimizeForSmallDB) {
   Options options = CurrentOptions();
   Close();
   options.OptimizeForSmallDb();

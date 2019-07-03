@@ -24,19 +24,6 @@ class DBBasicTest : public DBTestBase {
   DBBasicTest() : DBTestBase("/db_basic_test") {}
 };
 
-TEST_F(DBBasicTest, OpenWhenOpen) {
-  Options options = CurrentOptions();
-  options.env = env_;
-  rocksdb::DB* db2 = nullptr;
-  rocksdb::Status s = DB::Open(options, dbname_, &db2);
-
-  ASSERT_EQ(Status::Code::kIOError, s.code());
-  ASSERT_EQ(Status::SubCode::kNone, s.subcode());
-  ASSERT_TRUE(strstr(s.getState(), "lock ") != nullptr);
-
-  delete db2;
-}
-
 TEST_F(DBBasicTest, EncryptedDB) {
   Random rnd(301);
 
@@ -255,6 +242,19 @@ TEST_F(DBBasicTest, EncryptedCompactedDB) {
   s = Put("new", "value");
   ASSERT_EQ(s.ToString(),
             "Not implemented: Not supported operation in read only mode.");
+}
+
+TEST_F(DBBasicTest, OpenWhenOpen) {
+  Options options = CurrentOptions();
+  options.env = env_;
+  rocksdb::DB* db2 = nullptr;
+  rocksdb::Status s = DB::Open(options, dbname_, &db2);
+
+  ASSERT_EQ(Status::Code::kIOError, s.code());
+  ASSERT_EQ(Status::SubCode::kNone, s.subcode());
+  ASSERT_TRUE(strstr(s.getState(), "lock ") != nullptr);
+
+  delete db2;
 }
 
 #ifndef ROCKSDB_LITE

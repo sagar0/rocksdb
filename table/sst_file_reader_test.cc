@@ -112,7 +112,7 @@ TEST_F(SstFileReaderTest, Uint64Comparator) {
   CreateFileAndCheck(keys);
 }
 
-TEST_F(SstFileReaderTest, DISABLED_ReadFileWithGlobalSeqno) {
+TEST_F(SstFileReaderTest, ReadFileWithGlobalSeqno) {
   std::vector<std::string> keys;
   for (uint64_t i = 0; i < kNumKeys; i++) {
     keys.emplace_back(EncodeAsString(i));
