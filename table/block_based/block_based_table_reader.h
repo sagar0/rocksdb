@@ -294,7 +294,7 @@ class BlockBasedTable : public TableReader {
                        CachableEntry<Block>* block_entry, BlockType block_type,
                        GetContext* get_context,
                        BlockCacheLookupContext* lookup_context,
-                       bool for_compaction = false) const;
+                       bool encrypt, bool for_compaction = false) const;
 
   Status GetDataBlockFromCache(
       const ReadOptions& ro, const BlockHandle& handle,

@@ -179,7 +179,7 @@ inline bool BlockFetcher::TryGetUncompressBlockFromPersistentCache() {
   return false;
 }
 
-inline bool BlockFetcher::TryGetFromPrefetchBuffer(bool decrypt) {
+inline bool BlockFetcher::TryGetFromPrefetchBuffer() {
   if (prefetch_buffer_ != nullptr &&
       prefetch_buffer_->TryReadFromCache(
           handle_.offset(),
@@ -192,16 +192,16 @@ inline bool BlockFetcher::TryGetFromPrefetchBuffer(bool decrypt) {
     }
     got_from_prefetch_buffer_ = true;
 
-    if (!decrypt) {
-      used_buf_ = const_cast<char*>(slice_.data());
-    } else {
+    if (ioptions_.encrypted && decrypt_) {
       heap_buf_ = AllocateBlock(block_size_ + kBlockTrailerSize, memory_allocator_);
       used_buf_ = heap_buf_.get();
       memcpy(used_buf_, slice_.data(), block_size_ + kBlockTrailerSize);
 
-      if (ioptions_.encrypted && decrypt) {
+      if (ioptions_.encrypted && decrypt_) {
         DecryptBlock();
       }
+    } else {
+      used_buf_ = const_cast<char*>(slice_.data());
     }
   }
   return got_from_prefetch_buffer_;
@@ -275,15 +275,19 @@ inline void BlockFetcher::CopyBufferToHeap() {
   memcpy(heap_buf_.get(), used_buf_, block_size_ + kBlockTrailerSize);
 }
 
-inline void BlockFetcher::GetBlockContents(bool decrypt) {
+inline void BlockFetcher::GetBlockContents() {
   if (slice_.data() != used_buf_) {
     // the slice content is not the buffer provided
     *contents_ = BlockContents(Slice(slice_.data(), block_size_));
   } else {
     // page can be either uncompressed or compressed, the buffer either stack
     // or heap provided. Refer to https://github.com/facebook/rocksdb/pull/4096
-    if ((ioptions_.encrypted && !decrypt && got_from_prefetch_buffer_) ||
-        (!ioptions_.encrypted && got_from_prefetch_buffer_) ||
+
+    // if ((ioptions_.encrypted && !decrypt && got_from_prefetch_buffer_) ||
+    //     (!ioptions_.encrypted && got_from_prefetch_buffer_) ||
+    //     used_buf_ == &stack_buf_[0]) {
+
+    if ((!decrypt_ && got_from_prefetch_buffer_) ||
         used_buf_ == &stack_buf_[0]) {
       CopyBufferToHeap();
     } else if (used_buf_ == compressed_buf_.get()) {
@@ -301,7 +305,7 @@ inline void BlockFetcher::GetBlockContents(bool decrypt) {
 #endif
 }
 
-Status BlockFetcher::ReadBlockContents(bool decrypt) {
+Status BlockFetcher::ReadBlockContents() {
   block_size_ = static_cast<size_t>(handle_.size());
 
   if (TryGetUncompressBlockFromPersistentCache()) {
@@ -311,7 +315,7 @@ Status BlockFetcher::ReadBlockContents(bool decrypt) {
 #endif  // NDEBUG
     return Status::OK();
   }
-  if (TryGetFromPrefetchBuffer(decrypt)) {
+  if (TryGetFromPrefetchBuffer()) {
     if (!status_.ok()) {
       return status_;
     }
@@ -365,7 +369,7 @@ Status BlockFetcher::ReadBlockContents(bool decrypt) {
     if (!status_.ok()) {
       return status_;
     }
-    if (ioptions_.encrypted && decrypt) {
+    if (ioptions_.encrypted && decrypt_) {
       DecryptBlock();
     }
 
@@ -389,7 +393,7 @@ Status BlockFetcher::ReadBlockContents(bool decrypt) {
                                       memory_allocator_);
     compression_type_ = kNoCompression;
   } else {
-    GetBlockContents(decrypt);
+    GetBlockContents();
   }
 
   InsertUncompressedBlockToPersistentCacheIfNeeded();

@@ -1248,7 +1248,7 @@ Status BlockBasedTableBuilder::Finish() {
   if (ok()) {
     // flush the meta index block
     WriteRawBlock(meta_index_builder.Finish(), kNoCompression,
-                  &metaindex_block_handle);
+                  &metaindex_block_handle, false /* is_data_block */, false /* encrypt */);
   }
   if (ok()) {
     WriteFooter(metaindex_block_handle, index_block_handle);

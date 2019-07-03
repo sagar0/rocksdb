@@ -3891,7 +3891,7 @@ TEST_P(BlockBasedTableTest, PropertiesBlockRestartPointTest) {
           file, nullptr /* prefetch_buffer */, footer, read_options, handle,
           contents, ioptions, false /* decompress */,
           false /*maybe_compressed*/, block_type,
-          UncompressionDict::GetEmptyDict(), cache_options);
+          UncompressionDict::GetEmptyDict(), cache_options, false /* decrypt */);
 
       ASSERT_OK(block_fetcher.ReadBlockContents());
     };
@@ -3978,7 +3978,7 @@ TEST_P(BlockBasedTableTest, PropertiesMetaBlockLast) {
       table_reader.get(), nullptr /* prefetch_buffer */, footer, ReadOptions(),
       metaindex_handle, &metaindex_contents, ioptions, false /* decompress */,
       false /*maybe_compressed*/, BlockType::kMetaIndex,
-      UncompressionDict::GetEmptyDict(), pcache_opts,
+      UncompressionDict::GetEmptyDict(), pcache_opts, false /* decrypt */,
       nullptr /*memory_allocator*/);
   ASSERT_OK(block_fetcher.ReadBlockContents());
   Block metaindex_block(std::move(metaindex_contents),

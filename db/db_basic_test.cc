@@ -44,7 +44,43 @@ TEST_F(DBBasicTest, EncryptedDB) {
   options.encrypted = true;
   DestroyAndReopen(options);
 
-  // const std::string value(1000, ' ');
+  std::string v1(RandomString(&rnd, 1000));
+  std::string v2(RandomString(&rnd, 1000));
+  std::string v3(RandomString(&rnd, 1000));
+  ASSERT_OK(Put("foo", v1));
+  ASSERT_OK(Put("bar", v2));
+  ASSERT_OK(Put("baz", v3));
+  // The newly created SST file is encypted, block at a time.
+  ASSERT_OK(Flush());
+
+  ASSERT_EQ(v1, Get("foo"));
+  ASSERT_EQ(v2, Get("bar"));
+  ASSERT_EQ(v3, Get("baz"));
+  Close();
+
+  // Reading encypted files from and encypted=false DB is not supported -- hard
+  // crash the DB for now, with a checksum and block type mismatch.
+  // TODO(sagar0): Handle more gracefully later by giving out a NON-OK status
+  // to the user. Not a high-pri initially.
+  options.encrypted = false;
+  // Crashes -- as expected
+  // Reopen(options);
+
+  // Reopen again as encrypted -- and this should work.
+  options.encrypted = true;
+  Reopen(options);
+  ASSERT_EQ(v1, Get("foo"));
+}
+
+TEST_F(DBBasicTest, EncryptedDBWithDirectIO) {
+  Random rnd(301);
+
+  Options options = CurrentOptions();
+  options.encrypted = true;
+  options.use_direct_io_for_flush_and_compaction = true;
+  options.use_direct_reads = true;
+  DestroyAndReopen(options);
+
   std::string v1(RandomString(&rnd, 1000));
   std::string v2(RandomString(&rnd, 1000));
   std::string v3(RandomString(&rnd, 1000));
@@ -58,16 +94,15 @@ TEST_F(DBBasicTest, EncryptedDB) {
   ASSERT_EQ(v3, Get("baz"));
 }
 
-TEST_F(DBBasicTest, EncryptedDBWithDirectIO) {
+// Backward compatiblity check
+TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
   Random rnd(301);
 
   Options options = CurrentOptions();
-  options.encrypted = true;
-  options.use_direct_io_for_flush_and_compaction = true;
-  options.use_direct_reads = true;
+  // Unencrypted DB
+  options.encrypted = false;
   DestroyAndReopen(options);
 
-  // const std::string value(1000, ' ');
   std::string v1(RandomString(&rnd, 1000));
   std::string v2(RandomString(&rnd, 1000));
   std::string v3(RandomString(&rnd, 1000));
@@ -75,10 +110,116 @@ TEST_F(DBBasicTest, EncryptedDBWithDirectIO) {
   ASSERT_OK(Put("bar", v2));
   ASSERT_OK(Put("baz", v3));
   ASSERT_OK(Flush());
+  Close();
 
+  // Open the DB as encrypted
+  options.encrypted = true;
+  Reopen(options);
   ASSERT_EQ(v1, Get("foo"));
   ASSERT_EQ(v2, Get("bar"));
   ASSERT_EQ(v3, Get("baz"));
+}
+
+TEST_F(DBBasicTest, EncryptedCompactedDB) {
+  const uint64_t kFileSize = 1 << 20;
+  Options options = CurrentOptions();
+  options.encrypted = true;
+  options.disable_auto_compactions = true;
+  options.write_buffer_size = kFileSize;
+  options.target_file_size_base = kFileSize;
+  options.max_bytes_for_level_base = 1 << 30;
+  options.compression = kNoCompression;
+  Reopen(options);
+  // 1 L0 file, use CompactedDB if max_open_files = -1
+  ASSERT_OK(Put("aaa", DummyString(kFileSize / 2, '1')));
+  Flush();
+  Close();
+  ASSERT_OK(ReadOnlyReopen(options));
+  Status s = Put("new", "value");
+  ASSERT_EQ(s.ToString(),
+            "Not implemented: Not supported operation in read only mode.");
+  ASSERT_EQ(DummyString(kFileSize / 2, '1'), Get("aaa"));
+  Close();
+  options.max_open_files = -1;
+  ASSERT_OK(ReadOnlyReopen(options));
+  s = Put("new", "value");
+  ASSERT_EQ(s.ToString(),
+            "Not implemented: Not supported in compacted db mode.");
+  ASSERT_EQ(DummyString(kFileSize / 2, '1'), Get("aaa"));
+  Close();
+  Reopen(options);
+  // Add more L0 files
+  ASSERT_OK(Put("bbb", DummyString(kFileSize / 2, '2')));
+  Flush();
+  ASSERT_OK(Put("aaa", DummyString(kFileSize / 2, 'a')));
+  Flush();
+  ASSERT_OK(Put("bbb", DummyString(kFileSize / 2, 'b')));
+  ASSERT_OK(Put("eee", DummyString(kFileSize / 2, 'e')));
+  Flush();
+  Close();
+
+  ASSERT_OK(ReadOnlyReopen(options));
+  // Fallback to read-only DB
+  s = Put("new", "value");
+  ASSERT_EQ(s.ToString(),
+            "Not implemented: Not supported operation in read only mode.");
+  Close();
+
+  // Full compaction
+  Reopen(options);
+  // Add more keys
+  ASSERT_OK(Put("fff", DummyString(kFileSize / 2, 'f')));
+  ASSERT_OK(Put("hhh", DummyString(kFileSize / 2, 'h')));
+  ASSERT_OK(Put("iii", DummyString(kFileSize / 2, 'i')));
+  ASSERT_OK(Put("jjj", DummyString(kFileSize / 2, 'j')));
+  db_->CompactRange(CompactRangeOptions(), nullptr, nullptr);
+  ASSERT_EQ(3, NumTableFilesAtLevel(1));
+  Close();
+
+  // CompactedDB
+  ASSERT_OK(ReadOnlyReopen(options));
+  s = Put("new", "value");
+  ASSERT_EQ(s.ToString(),
+            "Not implemented: Not supported in compacted db mode.");
+  ASSERT_EQ("NOT_FOUND", Get("abc"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'a'), Get("aaa"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'b'), Get("bbb"));
+  ASSERT_EQ("NOT_FOUND", Get("ccc"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'e'), Get("eee"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'f'), Get("fff"));
+  ASSERT_EQ("NOT_FOUND", Get("ggg"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'h'), Get("hhh"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'i'), Get("iii"));
+  ASSERT_EQ(DummyString(kFileSize / 2, 'j'), Get("jjj"));
+  ASSERT_EQ("NOT_FOUND", Get("kkk"));
+
+  // MultiGet
+  std::vector<std::string> values;
+  std::vector<Status> status_list = dbfull()->MultiGet(
+      ReadOptions(),
+      std::vector<Slice>({Slice("aaa"), Slice("ccc"), Slice("eee"),
+                          Slice("ggg"), Slice("iii"), Slice("kkk")}),
+      &values);
+  ASSERT_EQ(status_list.size(), static_cast<uint64_t>(6));
+  ASSERT_EQ(values.size(), static_cast<uint64_t>(6));
+  ASSERT_OK(status_list[0]);
+  ASSERT_EQ(DummyString(kFileSize / 2, 'a'), values[0]);
+  ASSERT_TRUE(status_list[1].IsNotFound());
+  ASSERT_OK(status_list[2]);
+  ASSERT_EQ(DummyString(kFileSize / 2, 'e'), values[2]);
+  ASSERT_TRUE(status_list[3].IsNotFound());
+  ASSERT_OK(status_list[4]);
+  ASSERT_EQ(DummyString(kFileSize / 2, 'i'), values[4]);
+  ASSERT_TRUE(status_list[5].IsNotFound());
+
+  Reopen(options);
+  // Add a key
+  ASSERT_OK(Put("fff", DummyString(kFileSize / 2, 'f')));
+  Close();
+  ASSERT_OK(ReadOnlyReopen(options));
+  s = Put("new", "value");
+  ASSERT_EQ(s.ToString(),
+            "Not implemented: Not supported operation in read only mode.");
 }
 
 #ifndef ROCKSDB_LITE

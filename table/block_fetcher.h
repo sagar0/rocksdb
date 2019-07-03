@@ -43,6 +43,7 @@ class BlockFetcher {
                bool do_uncompress, bool maybe_compressed, BlockType block_type,
                const UncompressionDict& uncompression_dict,
                const PersistentCacheOptions& cache_options,
+               const bool decrypt,
                MemoryAllocator* memory_allocator = nullptr,
                MemoryAllocator* memory_allocator_compressed = nullptr,
                bool for_compaction = false)
@@ -58,11 +59,12 @@ class BlockFetcher {
         block_type_(block_type),
         uncompression_dict_(uncompression_dict),
         cache_options_(cache_options),
+        decrypt_(decrypt),
         memory_allocator_(memory_allocator),
         memory_allocator_compressed_(memory_allocator_compressed),
         for_compaction_(for_compaction) {}
 
-  Status ReadBlockContents(bool decrypt = true);
+  Status ReadBlockContents();
   CompressionType get_compression_type() const { return compression_type_; }
 
  private:
@@ -80,6 +82,7 @@ class BlockFetcher {
   BlockType block_type_;
   const UncompressionDict& uncompression_dict_;
   const PersistentCacheOptions& cache_options_;
+  const bool decrypt_;
   MemoryAllocator* memory_allocator_;
   MemoryAllocator* memory_allocator_compressed_;
   Status status_;
@@ -97,12 +100,12 @@ class BlockFetcher {
   // return true if found
   bool TryGetUncompressBlockFromPersistentCache();
   // return true if found
-  bool TryGetFromPrefetchBuffer(bool decrypt);
+  bool TryGetFromPrefetchBuffer();
   bool TryGetCompressedBlockFromPersistentCache();
   void PrepareBufferForBlockFromFile();
   // Copy content from used_buf_ to new heap buffer.
   void CopyBufferToHeap();
-  void GetBlockContents(bool decrypt);
+  void GetBlockContents();
   void InsertCompressedBlockToPersistentCacheIfNeeded();
   void InsertUncompressedBlockToPersistentCacheIfNeeded();
   void CheckBlockChecksum();

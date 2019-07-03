@@ -82,14 +82,14 @@ Status ReadBlockFromFile(
     std::unique_ptr<Block>* result, const ImmutableCFOptions& ioptions,
     bool do_uncompress, bool maybe_compressed, BlockType block_type,
     const UncompressionDict& uncompression_dict,
-    const PersistentCacheOptions& cache_options, SequenceNumber global_seqno,
+    const PersistentCacheOptions& cache_options, bool decrypt, SequenceNumber global_seqno,
     size_t read_amp_bytes_per_bit, MemoryAllocator* memory_allocator,
     bool for_compaction = false) {
   BlockContents contents;
   BlockFetcher block_fetcher(
       file, prefetch_buffer, footer, options, handle, &contents, ioptions,
       do_uncompress, maybe_compressed, block_type, uncompression_dict,
-      cache_options, memory_allocator, nullptr, for_compaction);
+      cache_options, decrypt, memory_allocator, nullptr, for_compaction);
   Status s = block_fetcher.ReadBlockContents();
   if (s.ok()) {
     result->reset(new Block(std::move(contents), global_seqno,
@@ -249,7 +249,7 @@ Status BlockBasedTable::IndexReaderCommon::ReadIndexBlock(
   const Status s = table->RetrieveBlock(
       prefetch_buffer, read_options, rep->footer.index_handle(),
       UncompressionDict::GetEmptyDict(), index_block, BlockType::kIndex,
-      get_context, lookup_context);
+      get_context, lookup_context, rep->encrypted);
 
   return s;
 }
@@ -613,7 +613,7 @@ class HashIndexReader : public BlockBasedTable::IndexReaderCommon {
         file, prefetch_buffer, footer, ReadOptions(), prefixes_handle,
         &prefixes_contents, ioptions, true /*decompress*/,
         true /*maybe_compressed*/, BlockType::kHashIndexPrefixes,
-        UncompressionDict::GetEmptyDict(), cache_options, memory_allocator);
+        UncompressionDict::GetEmptyDict(), cache_options, rep->encrypted, memory_allocator);
     s = prefixes_block_fetcher.ReadBlockContents();
     if (!s.ok()) {
       return s;
@@ -623,7 +623,7 @@ class HashIndexReader : public BlockBasedTable::IndexReaderCommon {
         file, prefetch_buffer, footer, ReadOptions(), prefixes_meta_handle,
         &prefixes_meta_contents, ioptions, true /*decompress*/,
         true /*maybe_compressed*/, BlockType::kHashIndexMetadata,
-        UncompressionDict::GetEmptyDict(), cache_options, memory_allocator);
+        UncompressionDict::GetEmptyDict(), cache_options, rep->encrypted, memory_allocator);
     s = prefixes_meta_block_fetcher.ReadBlockContents();
     if (!s.ok()) {
       // TODO: log error
@@ -1402,7 +1402,7 @@ Status BlockBasedTable::ReadCompressionDictBlock(
         rep_->compression_dict_handle, compression_dict_cont.get(),
         rep_->ioptions, false /* decompress */, false /*maybe_compressed*/,
         BlockType::kCompressionDictionary, UncompressionDict::GetEmptyDict(),
-        cache_options);
+        cache_options, rep_->encrypted);
     s = compression_block_fetcher.ReadBlockContents();
 
     if (!s.ok()) {
@@ -1614,6 +1614,7 @@ Status BlockBasedTable::ReadMetaBlock(FilePrefetchBuffer* prefetch_buffer,
       rep_->footer.metaindex_handle(), &meta, rep_->ioptions,
       true /* decompress */, true /*maybe_compressed*/, BlockType::kMetaIndex,
       UncompressionDict::GetEmptyDict(), rep_->persistent_cache_options,
+      false /* decrypt */,
       kDisableGlobalSequenceNumber, 0 /* read_amp_bytes_per_bit */,
       GetMemoryAllocator(rep_->table_options));
 
@@ -1847,7 +1848,7 @@ FilterBlockReader* BlockBasedTable::ReadFilter(
       filter_handle, &block, rep->ioptions, false /* decompress */,
       false /*maybe_compressed*/, BlockType::kFilter,
       UncompressionDict::GetEmptyDict(), rep->persistent_cache_options,
-      GetMemoryAllocator(rep->table_options));
+      rep->encrypted, GetMemoryAllocator(rep->table_options));
   Status s = block_fetcher.ReadBlockContents();
 
   if (!s.ok()) {
@@ -2119,7 +2120,8 @@ TBlockIter* BlockBasedTable::NewDataBlockIterator(
 
   CachableEntry<Block> block;
   s = RetrieveBlock(prefetch_buffer, ro, handle, uncompression_dict, &block,
-                    block_type, get_context, lookup_context, for_compaction);
+                    block_type, get_context, lookup_context, rep_->encrypted,
+                    for_compaction);
 
   if (!s.ok()) {
     assert(block.IsEmpty());
@@ -2359,7 +2361,7 @@ Status BlockBasedTable::MaybeReadBlockAndLoadToCache(
             &raw_block_contents, rep_->ioptions,
             do_decompress /* do uncompress */, rep_->blocks_maybe_compressed,
             block_type, uncompression_dict, rep_->persistent_cache_options,
-            GetMemoryAllocator(rep_->table_options),
+            rep_->encrypted, GetMemoryAllocator(rep_->table_options),
             GetMemoryAllocatorForCompressedBlock(rep_->table_options));
         s = block_fetcher.ReadBlockContents();
         raw_block_comp_type = block_fetcher.get_compression_type();
@@ -2609,7 +2611,7 @@ Status BlockBasedTable::RetrieveBlock(
     const BlockHandle& handle, const UncompressionDict& uncompression_dict,
     CachableEntry<Block>* block_entry, BlockType block_type,
     GetContext* get_context, BlockCacheLookupContext* lookup_context,
-    bool for_compaction) const {
+    bool decrypt, bool for_compaction) const {
   assert(block_entry);
   assert(block_entry->IsEmpty());
 
@@ -2649,7 +2651,7 @@ Status BlockBasedTable::RetrieveBlock(
         rep_->file.get(), prefetch_buffer, rep_->footer, ro, handle, &block,
         rep_->ioptions, rep_->blocks_maybe_compressed,
         rep_->blocks_maybe_compressed, block_type, uncompression_dict,
-        rep_->persistent_cache_options, rep_->get_global_seqno(block_type),
+        rep_->persistent_cache_options, decrypt, rep_->get_global_seqno(block_type),
         block_type == BlockType::kData
             ? rep_->table_options.read_amp_bytes_per_bit
             : 0,
@@ -3905,7 +3907,8 @@ Status BlockBasedTable::VerifyChecksumInBlocks(
         rep_->file.get(), nullptr /* prefetch buffer */, rep_->footer,
         ReadOptions(), handle, &contents, rep_->ioptions,
         false /* decompress */, false /*maybe_compressed*/, BlockType::kData,
-        UncompressionDict::GetEmptyDict(), rep_->persistent_cache_options);
+        UncompressionDict::GetEmptyDict(), rep_->persistent_cache_options,
+        rep_->encrypted);
     s = block_fetcher.ReadBlockContents();
     if (!s.ok()) {
       break;
@@ -3964,7 +3967,8 @@ Status BlockBasedTable::VerifyChecksumInMetaBlocks(
         ReadOptions(), handle, &contents, rep_->ioptions,
         false /* decompress */, false /*maybe_compressed*/,
         GetBlockTypeForMetaBlockByName(meta_block_name),
-        UncompressionDict::GetEmptyDict(), rep_->persistent_cache_options);
+        UncompressionDict::GetEmptyDict(), rep_->persistent_cache_options,
+        rep_->encrypted);
     s = block_fetcher.ReadBlockContents();
     if (s.IsCorruption() && meta_block_name == kPropertiesBlock) {
       TableProperties* table_properties;
@@ -4244,7 +4248,7 @@ Status BlockBasedTable::DumpTable(WritableFile* out_file,
               ReadOptions(), handle, &block, rep_->ioptions,
               false /*decompress*/, false /*maybe_compressed*/,
               BlockType::kFilter, UncompressionDict::GetEmptyDict(),
-              rep_->persistent_cache_options);
+              rep_->persistent_cache_options, rep_->encrypted);
           s = block_fetcher.ReadBlockContents();
           if (!s.ok()) {
             rep_->filter.reset(new BlockBasedFilterBlockReader(
