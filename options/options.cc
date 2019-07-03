@@ -87,7 +87,9 @@ AdvancedColumnFamilyOptions::AdvancedColumnFamilyOptions(const Options& options)
       ttl(options.ttl),
       periodic_compaction_seconds(options.periodic_compaction_seconds),
       sample_for_compression(options.sample_for_compression),
-      encryption(options.encryption) {
+      encryption(options.encryption),
+      encryption_key(options.encryption_key),
+      encryption_iv(options.encryption_iv) {
   assert(memtable_factory.get() != nullptr);
   if (max_bytes_for_level_multiplier_additional.size() <
       static_cast<unsigned int>(num_levels)) {

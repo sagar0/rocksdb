@@ -674,6 +674,8 @@ struct AdvancedColumnFamilyOptions {
   uint64_t sample_for_compression = 0;
 
   EncryptionType encryption = kNoEncryption;
+  Slice encryption_key;
+  Slice encryption_iv;
 
   // Create ColumnFamilyOptions with default values for all fields
   AdvancedColumnFamilyOptions();

@@ -35,15 +35,17 @@ inline void BlockFetcher::DecryptBlock() {
   // Decrypted text will never exceed the encrypted text. So the buffer to store
   // the plaintext can be block_size_ in length.
   unsigned char decrypt_buf[block_size_];
-  /* A 256 bit key */
-  const unsigned char *key = reinterpret_cast<const unsigned char *>(
-      "01234567890123456789012345678901");
-  /* A 128 bit IV */
-  const unsigned char *iv =
-      reinterpret_cast<const unsigned char *>("0123456789012345");
+  // /* A 256 bit key */
+  // const unsigned char *key = reinterpret_cast<const unsigned char *>(
+  //     "01234567890123456789012345678901");
+  // /* A 128 bit IV */
+  // const unsigned char *iv =
+  //     reinterpret_cast<const unsigned char *>("0123456789012345");
   int decryptedtext_len =
       AesDecrypt(reinterpret_cast<const unsigned char *>(slice_.data()),
-                 slice_.size() - kBlockTrailerSize, decrypt_buf, encryption_type_, key, iv);
+                 slice_.size() - kBlockTrailerSize, decrypt_buf, encryption_type_,
+                 reinterpret_cast<const unsigned char *>(ioptions_.encryption_key.data()),
+                 reinterpret_cast<const unsigned char *>(ioptions_.encryption_iv.data()));
 
   memmove(used_buf_ + decryptedtext_len, used_buf_ + block_size_,
           kBlockTrailerSize);

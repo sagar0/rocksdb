@@ -111,6 +111,10 @@ struct ImmutableCFOptions {
 
   EncryptionType encryption;
 
+  Slice encryption_key;
+
+  Slice encryption_iv;
+
   // A vector of EventListeners which callback functions will be called
   // when specific RocksDB event happens.
   std::vector<std::shared_ptr<EventListener>> listeners;

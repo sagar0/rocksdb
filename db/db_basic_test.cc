@@ -27,8 +27,19 @@ class DBBasicTest : public DBTestBase {
 TEST_F(DBBasicTest, EncryptedDB) {
   Random rnd(301);
 
+  // /* A 256 bit key */
+  // const unsigned char *key = reinterpret_cast<const unsigned char *>(
+  //     "01234567890123456789012345678901");
+  // /* A 128 bit IV */
+  // const unsigned char *iv =
+  //     reinterpret_cast<const unsigned char *>("0123456789012345");
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
   Options options = CurrentOptions();
   options.encryption = kAES256;
+  options.encryption_key = Slice(enc_key);
+  options.encryption_iv = Slice(enc_iv);
   DestroyAndReopen(options);
 
   std::string v1(RandomString(&rnd, 1000));
@@ -62,8 +73,13 @@ TEST_F(DBBasicTest, EncryptedDB) {
 TEST_F(DBBasicTest, EncryptedCF) {
   Random rnd(301);
 
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
   Options enc_options;
   enc_options.encryption = kAES256;
+  enc_options.encryption_key = Slice(enc_key);
+  enc_options.encryption_iv = Slice(enc_iv);
   enc_options = CurrentOptions(enc_options);
 
   Options options = CurrentOptions();
@@ -97,8 +113,13 @@ TEST_F(DBBasicTest, EncryptedCF) {
 TEST_F(DBBasicTest, DISABLED_EncryptedDBWithDirectIO) {
   Random rnd(301);
 
-  Options options = CurrentOptions();
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
+  Options options;
   options.encryption = kAES256;
+  options.encryption_key = Slice(enc_key);
+  options.encryption_iv = Slice(enc_iv);
   options.use_direct_io_for_flush_and_compaction = true;
   options.use_direct_reads = true;
   DestroyAndReopen(options);
@@ -120,6 +141,9 @@ TEST_F(DBBasicTest, DISABLED_EncryptedDBWithDirectIO) {
 TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
   Random rnd(301);
 
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
   Options options = CurrentOptions();
   // Unencrypted DB
   options.encryption = kNoEncryption;
@@ -136,6 +160,8 @@ TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
 
   // Open the DB as encrypted
   options.encryption = kAES256;
+  options.encryption_key = Slice(enc_key);
+  options.encryption_iv = Slice(enc_iv);
   Reopen(options);
   ASSERT_EQ(v1, Get("foo"));
   ASSERT_EQ(v2, Get("bar"));
@@ -144,8 +170,13 @@ TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
 
 TEST_F(DBBasicTest, EncryptedCompactedDB) {
   const uint64_t kFileSize = 1 << 20;
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
   Options options = CurrentOptions();
   options.encryption = kAES256;
+  options.encryption_key = Slice(enc_key);
+  options.encryption_iv = Slice(enc_iv);
   options.disable_auto_compactions = true;
   options.write_buffer_size = kFileSize;
   options.target_file_size_base = kFileSize;

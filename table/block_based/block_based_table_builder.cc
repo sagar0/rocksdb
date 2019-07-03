@@ -207,16 +207,19 @@ Slice CompressBlock(const Slice& raw, const CompressionInfo& info,
 }
 
 // Returns encrypted text length
-inline int EncryptBlock(const Slice& raw, char* enc_output, EncryptionType cipher) {
-  /* A 256 bit key */
-  const unsigned char* key = reinterpret_cast<const unsigned char*>(
-      "01234567890123456789012345678901");
-  /* A 128 bit IV */
-  const unsigned char* iv =
-      reinterpret_cast<const unsigned char*>("0123456789012345");
+inline int EncryptBlock(const Slice& raw, char* enc_output, EncryptionType cipher,
+    Slice encryption_key, Slice encryption_iv) {
+  // /* A 256 bit key */
+  // const unsigned char* key = reinterpret_cast<const unsigned char*>(
+  //     "01234567890123456789012345678901");
+  // /* A 128 bit IV */
+  // const unsigned char* iv =
+  //     reinterpret_cast<const unsigned char*>("0123456789012345");
   int ciphertext_len =
       AesEncrypt(reinterpret_cast<const unsigned char*>(raw.data()), raw.size(),
-                 reinterpret_cast<unsigned char*>(enc_output), cipher, key, iv);
+                 reinterpret_cast<unsigned char*>(enc_output), cipher,
+                 reinterpret_cast<const unsigned char*>(encryption_key.data()),
+                 reinterpret_cast<const unsigned char*>(encryption_iv.data()));
 
   return ciphertext_len;
 }
@@ -739,7 +742,8 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
   char enc_output[kEncOuputBufSize];
   Slice final_block_contents = block_contents;
   if (r->ioptions.encryption != kNoEncryption && encrypt) {
-    int enc_len = EncryptBlock(block_contents, enc_output, r->ioptions.encryption);
+    int enc_len = EncryptBlock(block_contents, enc_output, r->ioptions.encryption,
+        r->ioptions.encryption_key, r->ioptions.encryption_iv);
     final_block_contents = Slice(enc_output, enc_len);
   }
 

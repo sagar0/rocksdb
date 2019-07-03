@@ -395,6 +395,8 @@ TEST_F(OptionsSettableTest, ColumnFamilyOptionsAllFieldsSettable) {
   options->purge_redundant_kvs_while_flush = false;
   options->max_mem_compaction_level = 0;
   options->compaction_filter = nullptr;
+  options->encryption_key = Slice("123");
+  options->encryption_iv = Slice("456");
 
   char* new_options_ptr = new char[sizeof(ColumnFamilyOptions)];
   ColumnFamilyOptions* new_options =
