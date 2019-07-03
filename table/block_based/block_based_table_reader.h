@@ -591,6 +591,7 @@ struct BlockBasedTable::Rep {
   bool closed = false;
   const bool immortal_table;
 
+  EncryptionType encryption = kNoEncryption;
   bool encrypted = false;
 
   SequenceNumber get_global_seqno(BlockType block_type) const {

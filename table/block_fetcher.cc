@@ -123,12 +123,12 @@ inline bool BlockFetcher::TryGetFromPrefetchBuffer() {
     }
     got_from_prefetch_buffer_ = true;
 
-    if (ioptions_.encrypted && decrypt_) {
+    if (ioptions_.encryption != kNoEncryption && decrypt_) {
       heap_buf_ = AllocateBlock(block_size_ + kBlockTrailerSize, memory_allocator_);
       used_buf_ = heap_buf_.get();
       memcpy(used_buf_, slice_.data(), block_size_ + kBlockTrailerSize);
 
-      if (ioptions_.encrypted && decrypt_) {
+      if (ioptions_.encryption != kNoEncryption && decrypt_) {
         DecryptBlock();
       }
     } else {
@@ -214,10 +214,6 @@ inline void BlockFetcher::GetBlockContents() {
     // page can be either uncompressed or compressed, the buffer either stack
     // or heap provided. Refer to https://github.com/facebook/rocksdb/pull/4096
 
-    // if ((ioptions_.encrypted && !decrypt && got_from_prefetch_buffer_) ||
-    //     (!ioptions_.encrypted && got_from_prefetch_buffer_) ||
-    //     used_buf_ == &stack_buf_[0]) {
-
     if ((!decrypt_ && got_from_prefetch_buffer_) ||
         used_buf_ == &stack_buf_[0]) {
       CopyBufferToHeap();
@@ -300,7 +296,7 @@ Status BlockFetcher::ReadBlockContents() {
     if (!status_.ok()) {
       return status_;
     }
-    if (ioptions_.encrypted && decrypt_) {
+    if (ioptions_.encryption != kNoEncryption && decrypt_) {
       DecryptBlock();
     }
 

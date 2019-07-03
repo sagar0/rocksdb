@@ -29,6 +29,7 @@
 #include "rocksdb/wal_filter.h"
 #include "table/block_based/block_based_table_factory.h"
 #include "util/compression.h"
+#include "util/encryption.h"
 
 namespace rocksdb {
 
@@ -86,7 +87,7 @@ AdvancedColumnFamilyOptions::AdvancedColumnFamilyOptions(const Options& options)
       ttl(options.ttl),
       periodic_compaction_seconds(options.periodic_compaction_seconds),
       sample_for_compression(options.sample_for_compression),
-      encrypted(options.encrypted) {
+      encryption(options.encryption) {
   assert(memtable_factory.get() != nullptr);
   if (max_bytes_for_level_multiplier_additional.size() <
       static_cast<unsigned int>(num_levels)) {
@@ -357,8 +358,8 @@ void ColumnFamilyOptions::Dump(Logger* log) const {
                      "         Options.periodic_compaction_seconds: %" PRIu64,
                      periodic_compaction_seconds);
     ROCKS_LOG_HEADER(log,
-                    "                            Options.encrypted: %d",
-                    encrypted);
+                     "                          Options.encryption: %s",
+                    EncryptionTypeToString(encryption).c_str());
 }  // ColumnFamilyOptions::Dump
 
 void Options::Dump(Logger* log) const {

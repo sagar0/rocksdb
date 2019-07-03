@@ -22,6 +22,13 @@ class TablePropertiesCollectorFactory;
 class TableFactory;
 struct Options;
 
+enum EncryptionType : char {
+  kNoEncryption = 0x0,
+  kAES128 = 0x1,
+  kAES192 = 0x2,
+  kAES256 = 0x3,
+};
+
 enum CompactionStyle : char {
   // level based compaction style
   kCompactionStyleLevel = 0x0,
@@ -666,7 +673,7 @@ struct AdvancedColumnFamilyOptions {
   // data is left uncompressed (unless compression is also requested).
   uint64_t sample_for_compression = 0;
 
-  bool encrypted = false;
+  EncryptionType encryption = kNoEncryption;
 
   // Create ColumnFamilyOptions with default values for all fields
   AdvancedColumnFamilyOptions();

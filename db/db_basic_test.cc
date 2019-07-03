@@ -28,7 +28,7 @@ TEST_F(DBBasicTest, EncryptedDB) {
   Random rnd(301);
 
   Options options = CurrentOptions();
-  options.encrypted = true;
+  options.encryption = kAES256;
   DestroyAndReopen(options);
 
   std::string v1(RandomString(&rnd, 1000));
@@ -49,12 +49,12 @@ TEST_F(DBBasicTest, EncryptedDB) {
   // crash the DB for now, with a checksum and block type mismatch.
   // TODO(sagar0): Handle more gracefully later by giving out a NON-OK status
   // to the user. Not a high-pri initially.
-  options.encrypted = false;
+  options.encryption = kNoEncryption;
   // Crashes -- as expected
   // Reopen(options);
 
   // Reopen again as encrypted -- and this should work.
-  options.encrypted = true;
+  options.encryption = kAES256;
   Reopen(options);
   ASSERT_EQ(v1, Get("foo"));
 }
@@ -63,7 +63,7 @@ TEST_F(DBBasicTest, EncryptedCF) {
   Random rnd(301);
 
   Options enc_options;
-  enc_options.encrypted = true;
+  enc_options.encryption = kAES256;
   enc_options = CurrentOptions(enc_options);
 
   Options options = CurrentOptions();
@@ -98,7 +98,7 @@ TEST_F(DBBasicTest, DISABLED_EncryptedDBWithDirectIO) {
   Random rnd(301);
 
   Options options = CurrentOptions();
-  options.encrypted = true;
+  options.encryption = kAES256;
   options.use_direct_io_for_flush_and_compaction = true;
   options.use_direct_reads = true;
   DestroyAndReopen(options);
@@ -122,7 +122,7 @@ TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
 
   Options options = CurrentOptions();
   // Unencrypted DB
-  options.encrypted = false;
+  options.encryption = kNoEncryption;
   DestroyAndReopen(options);
 
   std::string v1(RandomString(&rnd, 1000));
@@ -135,7 +135,7 @@ TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
   Close();
 
   // Open the DB as encrypted
-  options.encrypted = true;
+  options.encryption = kAES256;
   Reopen(options);
   ASSERT_EQ(v1, Get("foo"));
   ASSERT_EQ(v2, Get("bar"));
@@ -145,7 +145,7 @@ TEST_F(DBBasicTest, EncryptedDBReadUnencyptedOldFiles) {
 TEST_F(DBBasicTest, EncryptedCompactedDB) {
   const uint64_t kFileSize = 1 << 20;
   Options options = CurrentOptions();
-  options.encrypted = true;
+  options.encryption = kAES256;
   options.disable_auto_compactions = true;
   options.write_buffer_size = kFileSize;
   options.target_file_size_base = kFileSize;

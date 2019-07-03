@@ -248,6 +248,13 @@ std::unordered_map<std::string, CompressionType>
         {"kZSTD", kZSTD},
         {"kZSTDNotFinalCompression", kZSTDNotFinalCompression},
         {"kDisableCompressionOption", kDisableCompressionOption}};
+
+std::unordered_map<std::string, EncryptionType>
+    OptionsHelper::encryption_type_string_map = {
+        {"kNoEncryption", kNoEncryption},
+        {"kAES128", kAES128},
+        {"kAES192", kAES192},
+        {"kAES256", kAES256}};
 #ifndef ROCKSDB_LITE
 
 const std::string kNameComparator = "comparator";
@@ -576,6 +583,10 @@ bool ParseOptionHelper(char* opt_address, const OptionType& opt_type,
       return ParseEnum<CompactionStopStyle>(
           compaction_stop_style_string_map, value,
           reinterpret_cast<CompactionStopStyle*>(opt_address));
+    case OptionType::kEncryptionType:
+      return ParseEnum<EncryptionType>(
+          encryption_type_string_map, value,
+          reinterpret_cast<EncryptionType*>(opt_address));
     default:
       return false;
   }
@@ -774,6 +785,10 @@ bool SerializeSingleOptionHelper(const char* opt_address,
       return SerializeEnum<CompactionStopStyle>(
           compaction_stop_style_string_map,
           *reinterpret_cast<const CompactionStopStyle*>(opt_address), value);
+    case OptionType::kEncryptionType:
+      return SerializeEnum<EncryptionType>(
+          encryption_type_string_map,
+          *(reinterpret_cast<const EncryptionType*>(opt_address)), value);
     default:
       return false;
   }
@@ -2026,9 +2041,9 @@ std::unordered_map<std::string, OptionTypeInfo>
          {offset_of(&ColumnFamilyOptions::sample_for_compression),
           OptionType::kUInt64T, OptionVerificationType::kNormal, true,
           offsetof(struct MutableCFOptions, sample_for_compression)}},
-        {"encrypted",
-         {offset_of(&ColumnFamilyOptions::encrypted),
-          OptionType::kBoolean, OptionVerificationType::kNormal, false,
+        {"encryption",
+         {offset_of(&ColumnFamilyOptions::encryption),
+          OptionType::kEncryptionType, OptionVerificationType::kNormal, false,
           0}}};
 
 std::unordered_map<std::string, OptionTypeInfo>

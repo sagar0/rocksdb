@@ -82,6 +82,7 @@ enum class OptionType {
   kInfoLogLevel,
   kLRUCacheOptions,
   kEnv,
+  kEncryptionType,
   kUnknown,
 };
 
@@ -185,6 +186,8 @@ struct OptionsHelper {
       access_hint_string_map;
   static std::unordered_map<std::string, InfoLogLevel>
       info_log_level_string_map;
+  static std::unordered_map<std::string, EncryptionType>
+      encryption_type_string_map;
   static ColumnFamilyOptions dummy_cf_options;
   static CompactionOptionsFIFO dummy_comp_options;
   static LRUCacheOptions dummy_lru_cache_options;
@@ -228,6 +231,8 @@ static auto& wal_recovery_mode_string_map =
 static auto& access_hint_string_map = OptionsHelper::access_hint_string_map;
 static auto& info_log_level_string_map =
     OptionsHelper::info_log_level_string_map;
+static auto& encryption_type_string_map =
+    OptionsHelper::encryption_type_string_map;
 #endif  // !ROCKSDB_LITE
 
 }  // namespace rocksdb

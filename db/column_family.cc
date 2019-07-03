@@ -337,12 +337,12 @@ ColumnFamilyOptions SanitizeOptions(const ImmutableDBOptions& db_options,
 
   // Santinize Encryption
   // Disable encryption with certain incompatible options.
-  if (result.encrypted && result.table_factory->Name() != BlockBasedTableFactory().Name()) {
-    result.encrypted = false;
+  if (result.encryption != kNoEncryption && result.table_factory->Name() != BlockBasedTableFactory().Name()) {
+    result.encryption = kNoEncryption;
   }
 
-  if (result.encrypted && (db_options.allow_mmap_reads || db_options.allow_mmap_writes)) {
-    result.encrypted = false;
+  if (result.encryption != kNoEncryption && (db_options.allow_mmap_reads || db_options.allow_mmap_writes)) {
+    result.encryption = kNoEncryption;
   }
 
   return result;

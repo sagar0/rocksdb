@@ -584,6 +584,9 @@ bool AreEqualOptions(
     case OptionType::kInfoLogLevel:
       return (*reinterpret_cast<const InfoLogLevel*>(offset1) ==
               *reinterpret_cast<const InfoLogLevel*>(offset2));
+    case OptionType::kEncryptionType:
+      return (*reinterpret_cast<const EncryptionType*>(offset1) ==
+              *reinterpret_cast<const EncryptionType*>(offset2));
     case OptionType::kCompactionOptionsFIFO: {
       CompactionOptionsFIFO lhs =
           *reinterpret_cast<const CompactionOptionsFIFO*>(offset1);

@@ -1156,7 +1156,25 @@ DEFINE_int64(multiread_stride, 0,
              "Stride length for the keys in a MultiGet batch");
 DEFINE_bool(multiread_batched, false, "Use the new MultiGet API");
 
-DEFINE_bool(encrypted, false, "Encrypt DB");
+static enum rocksdb::EncryptionType DBBenchStringToCompressionType(const char* ctype) {
+  assert(ctype);
+
+  if (!strcasecmp(ctype, "none"))
+    return rocksdb::kNoEncryption;
+  else if (!strcasecmp(ctype, "aes128"))
+    return rocksdb::kAES128;
+  else if (!strcasecmp(ctype, "aes192"))
+    return rocksdb::kAES192;
+  else if (!strcasecmp(ctype, "aes256"))
+    return rocksdb::kAES256;
+
+  fprintf(stdout, "Cannot parse encryption type '%s'\n", ctype);
+  return rocksdb::kNoEncryption;  // default value
+}
+
+DEFINE_string(encryption, "none", "Encryption type");
+static enum rocksdb::EncryptionType FLAGS_encryption_type_e =
+    rocksdb::kNoEncryption;
 
 enum RepFactory {
   kSkipList,
@@ -3682,7 +3700,7 @@ class Benchmark {
     options.max_successive_merges = FLAGS_max_successive_merges;
     options.report_bg_io_stats = FLAGS_report_bg_io_stats;
 
-    options.encrypted = FLAGS_encrypted;
+    options.encryption = FLAGS_encryption_type_e;
 
     // set universal style compaction configurations, if applicable
     if (FLAGS_universal_size_ratio != 0) {
@@ -6402,6 +6420,9 @@ int db_bench_tool(int argc, char** argv) {
 
   FLAGS_compression_type_e =
     StringToCompressionType(FLAGS_compression_type.c_str());
+
+  FLAGS_encryption_type_e =
+    DBBenchStringToCompressionType(FLAGS_compression_type.c_str());
 
 #ifndef ROCKSDB_LITE
   std::unique_ptr<Env> custom_env_guard;

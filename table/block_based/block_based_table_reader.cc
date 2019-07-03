@@ -49,6 +49,7 @@
 #include "test_util/sync_point.h"
 #include "util/coding.h"
 #include "util/crc32c.h"
+#include "util/encryption.h"
 #include "util/file_reader_writer.h"
 #include "util/stop_watch.h"
 #include "util/string_util.h"
@@ -1301,7 +1302,8 @@ Status BlockBasedTable::ReadPropertiesBlock(
                CompressionTypeToString(kZSTD) ||
            rep_->table_properties->compression_name ==
                CompressionTypeToString(kZSTDNotFinalCompression));
-      rep_->encrypted = rep_->table_properties->encrypted;
+      rep_->encryption = StringToEncryptionType(rep_->table_properties->encryption_name);
+      rep_->encrypted = rep_->encryption == kNoEncryption ? false : true;
     }
   } else {
     ROCKS_LOG_ERROR(rep_->ioptions.info_log,

@@ -167,7 +167,9 @@ std::string TableProperties::ToString(
   AppendProperty(result, "file creation time", file_creation_time, prop_delim,
                  kv_delim);
 
-  AppendProperty(result, "encrypted", encrypted, prop_delim, kv_delim);
+  AppendProperty(result, "Encryption type",
+      encryption_name.empty() ? std::string("N/A") : encryption_name,
+      prop_delim, kv_delim);
 
   return result;
 }
@@ -241,8 +243,7 @@ const std::string TablePropertiesNames::kOldestKeyTime =
     "rocksdb.oldest.key.time";
 const std::string TablePropertiesNames::kFileCreationTime =
     "rocksdb.file.creation.time";
-const std::string TablePropertiesNames::kEncrypted =
-    "rocksdb.encrypted";
+const std::string TablePropertiesNames::kEncryption = "rocksdb.encryption";
 
 extern const std::string kPropertiesBlock = "rocksdb.properties";
 // Old property block name for backward compatibility

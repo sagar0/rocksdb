@@ -96,9 +96,6 @@ void PropertyBlockBuilder::AddTableProperty(const TableProperties& props) {
   if (props.file_creation_time > 0) {
     Add(TablePropertiesNames::kFileCreationTime, props.file_creation_time);
   }
-  if (props.encrypted > 0) {
-    Add(TablePropertiesNames::kEncrypted, props.encrypted);
-  }
 
   if (!props.filter_policy_name.empty()) {
     Add(TablePropertiesNames::kFilterPolicy, props.filter_policy_name);
@@ -127,6 +124,9 @@ void PropertyBlockBuilder::AddTableProperty(const TableProperties& props) {
   }
   if (!props.compression_options.empty()) {
     Add(TablePropertiesNames::kCompressionOptions, props.compression_options);
+  }
+  if (!props.encryption_name.empty()) {
+    Add(TablePropertiesNames::kEncryption, props.encryption_name);
   }
 }
 
@@ -273,8 +273,6 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
        &new_table_properties->oldest_key_time},
       {TablePropertiesNames::kFileCreationTime,
        &new_table_properties->file_creation_time},
-      {TablePropertiesNames::kEncrypted,
-       &new_table_properties->encrypted},
   };
 
   std::string last_key;
@@ -333,6 +331,8 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
       new_table_properties->compression_name = raw_val.ToString();
     } else if (key == TablePropertiesNames::kCompressionOptions) {
       new_table_properties->compression_options = raw_val.ToString();
+    } else if (key == TablePropertiesNames::kEncryption) {
+      new_table_properties->encryption_name = raw_val.ToString();
     } else {
       // handle user-collected properties
       new_table_properties->user_collected_properties.insert(
@@ -526,7 +526,7 @@ Status ReadMetaBlock(RandomAccessFileReader* file,
   BlockFetcher block_fetcher2(
       file, prefetch_buffer, footer, read_options, block_handle, contents,
       ioptions, false /* decompress */, false /*maybe_compressed*/, block_type,
-      UncompressionDict::GetEmptyDict(), cache_options, ioptions.encrypted, /* TODO (sagar0) -- probably not right */
+      UncompressionDict::GetEmptyDict(), cache_options, ioptions.encryption != kNoEncryption, /* TODO (sagar0) -- probably not right */
       memory_allocator);
   return block_fetcher2.ReadBlockContents();
 }
