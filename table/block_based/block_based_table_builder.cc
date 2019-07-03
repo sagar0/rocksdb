@@ -735,16 +735,19 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
   Rep* r = rep_;
   StopWatch sw(r->ioptions.env, r->ioptions.statistics, WRITE_RAW_BLOCK_MICROS);
 
-  // Encryption
-  // Encrypted output buffer should be at least plaintext + AES block size, as
-  // encrypted text is always AES-block-aligned.
-  const size_t kEncOuputBufSize = block_contents.size() + 128;
-  char enc_output[kEncOuputBufSize];
-  Slice final_block_contents = block_contents;
+  std::unique_ptr<char> enc_output;
+  Slice final_block_contents;
   if (r->ioptions.encryption != kNoEncryption && encrypt) {
-    int enc_len = EncryptBlock(block_contents, enc_output, r->ioptions.encryption,
+    // Encryption
+    // Encrypted output buffer should be at least plaintext + AES block size, as
+    // encrypted text is always AES-block-aligned.
+    const size_t kEncOuputBufSize = block_contents.size() + 128;
+    enc_output.reset(new char[kEncOuputBufSize]);
+    int enc_len = EncryptBlock(block_contents, enc_output.get(), r->ioptions.encryption,
         r->ioptions.encryption_key, r->ioptions.encryption_iv);
-    final_block_contents = Slice(enc_output, enc_len);
+    final_block_contents = Slice(enc_output.get(), enc_len);
+  } else {
+    final_block_contents = Slice(block_contents.data(), block_contents.size());
   }
 
   handle->set_offset(r->offset);

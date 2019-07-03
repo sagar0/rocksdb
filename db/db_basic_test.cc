@@ -275,6 +275,39 @@ TEST_F(DBBasicTest, EncryptedCompactedDB) {
             "Not implemented: Not supported operation in read only mode.");
 }
 
+TEST_F(DBBasicTest, EncryptedDBWithPartitionedIndex) {
+  Random rnd(301);
+
+  const std::string enc_key = "01234567890123456789012345678901";
+  const std::string enc_iv = "0123456789012345";
+
+  Options options = CurrentOptions();
+  options.encryption = kAES256;
+  options.encryption_key = Slice(enc_key);
+  options.encryption_iv = Slice(enc_iv);
+  BlockBasedTableOptions table_options;
+  // Make each key/value an individual block
+  table_options.block_size = 64;
+  table_options.index_type = BlockBasedTableOptions::kTwoLevelIndexSearch;
+  table_options.partition_filters = true;
+  options.table_factory.reset(new BlockBasedTableFactory(table_options));
+
+  DestroyAndReopen(options);
+
+  std::string v1(RandomString(&rnd, 1000));
+  std::string v2(RandomString(&rnd, 1000));
+  std::string v3(RandomString(&rnd, 1000));
+  ASSERT_OK(Put("foo", v1));
+  ASSERT_OK(Put("bar", v2));
+  ASSERT_OK(Put("baz", v3));
+  // The newly created SST file is encypted, block at a time.
+  ASSERT_OK(Flush());
+
+  ASSERT_EQ(v1, Get("foo"));
+  ASSERT_EQ(v2, Get("bar"));
+  ASSERT_EQ(v3, Get("baz"));
+}
+
 TEST_F(DBBasicTest, OpenWhenOpen) {
   Options options = CurrentOptions();
   options.env = env_;
