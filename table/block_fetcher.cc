@@ -43,7 +43,7 @@ inline void BlockFetcher::DecryptBlock() {
       reinterpret_cast<const unsigned char *>("0123456789012345");
   int decryptedtext_len =
       AesDecrypt(reinterpret_cast<const unsigned char *>(slice_.data()),
-                 slice_.size() - kBlockTrailerSize, decrypt_buf, key, iv);
+                 slice_.size() - kBlockTrailerSize, decrypt_buf, encryption_type_, key, iv);
 
   memmove(used_buf_ + decryptedtext_len, used_buf_ + block_size_,
           kBlockTrailerSize);

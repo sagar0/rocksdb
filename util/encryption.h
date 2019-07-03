@@ -12,11 +12,11 @@ namespace rocksdb {
 
 int AesEncrypt(const unsigned char* plaintext,
                const size_t plaintext_length, unsigned char* ciphertext,
-               const unsigned char* key, const unsigned char* iv);
+               const EncryptionType cipher_type, const unsigned char* key, const unsigned char* iv);
 
 int AesDecrypt(const unsigned char *ciphertext,
                const size_t ciphertext_length, unsigned char *plaintext,
-               const unsigned char *key, const unsigned char *iv);
+               const EncryptionType cipher_type, const unsigned char *key, const unsigned char *iv);
 
 inline std::string EncryptionTypeToString(EncryptionType encryption_type) {
   switch (encryption_type) {

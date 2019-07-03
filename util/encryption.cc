@@ -15,21 +15,31 @@ namespace rocksdb {
 // Returns encrypted text length
 int AesEncrypt(const unsigned char* plaintext,
                const size_t plaintext_length, unsigned char* ciphertext,
-               const unsigned char* key, const unsigned char* iv) {
+               const EncryptionType cipher_type, const unsigned char* key, const unsigned char* iv) {
 #ifdef OPENSSL
-  const EVP_CIPHER* cipher = EVP_aes_256_cbc();
-  // const unsigned int kAesKey256SizeInBits = 256;
-  // const unsigned int kAesKeySizeInBytes = kAesKey256SizeInBits / 8;
-  // const unsigned int kAesBlockizeInBits = 128;
+  const EVP_CIPHER* cipher;
+  switch (cipher_type) {
+    case kAES128:
+      cipher = EVP_aes_128_cbc();
+      break;
+    case kAES192:
+      cipher = EVP_aes_192_cbc();
+      break;
+    case kAES256:
+      cipher = EVP_aes_256_cbc();
+      break;
+    default:
+      return 0;
+  }
 
   /* Create and initialize the context */
   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
   if (!ctx) {
-    return false;
+    return 0;
   }
 
   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
-    return false;
+    return 0;
 
   int u_len, f_len;
   /*
@@ -82,21 +92,31 @@ aes_error:
 // Returns decrypted text length
 int AesDecrypt(const unsigned char *ciphertext,
                const size_t ciphertext_length, unsigned char *plaintext,
-               const unsigned char *key, const unsigned char *iv) {
+               const EncryptionType cipher_type, const unsigned char *key, const unsigned char *iv) {
 #ifdef OPENSSL
-  const EVP_CIPHER *cipher = EVP_aes_256_cbc();
-  // const unsigned int kAesKey256SizeInBits = 256;
-  // const unsigned int kAesKeySizeInBytes = kAesKey256SizeInBits / 8;
-  // const unsigned int kAesBlockizeInBits = 128;
+  const EVP_CIPHER* cipher;
+  switch (cipher_type) {
+    case kAES128:
+      cipher = EVP_aes_128_cbc();
+      break;
+    case kAES192:
+      cipher = EVP_aes_192_cbc();
+      break;
+    case kAES256:
+      cipher = EVP_aes_256_cbc();
+      break;
+    default:
+      return 0;
+  }
 
   /* Create and initialize the context */
   EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
   if (!ctx) {
-    return false;
+    return 0;
   }
 
   if (!cipher || (EVP_CIPHER_iv_length(cipher) > 0 && !iv))
-    return false;
+    return 0;
 
   int u_len, f_len;
   /*

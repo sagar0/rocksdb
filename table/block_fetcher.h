@@ -62,7 +62,8 @@ class BlockFetcher {
         decrypt_(decrypt),
         memory_allocator_(memory_allocator),
         memory_allocator_compressed_(memory_allocator_compressed),
-        for_compaction_(for_compaction) {}
+        for_compaction_(for_compaction),
+        encryption_type_(ioptions.encryption) {}
 
   Status ReadBlockContents();
   CompressionType get_compression_type() const { return compression_type_; }
@@ -96,6 +97,7 @@ class BlockFetcher {
   bool got_from_prefetch_buffer_ = false;
   rocksdb::CompressionType compression_type_;
   bool for_compaction_ = false;
+  EncryptionType encryption_type_ = kNoEncryption;
 
   // return true if found
   bool TryGetUncompressBlockFromPersistentCache();
