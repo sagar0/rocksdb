@@ -327,6 +327,14 @@ if(WITH_TBB)
   list(APPEND THIRDPARTY_LIBS ${TBB_LIBRARIES})
 endif()
 
+option(WITH_SSL "build with OpenSSL/Crypto" OFF)
+if(WITH_SSL)
+  find_package(OPENSSL REQUIRED)
+  add_definitions(-DOPENSSL)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  list(APPEND THIRDPARTY_LIBS ${OPENSSL_LIBRARIES})
+endif()
+
 # Stall notifications eat some performance from inserts
 option(DISABLE_STALL_NOTIF "Build with stall notifications" OFF)
 if(DISABLE_STALL_NOTIF)
